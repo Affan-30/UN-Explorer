@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>UN Vote Explorer</title>
+    <style>
+/* @import url('https://fonts.googleapis.com/css2?family=Honk:MORF@15&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap'); */
+@import url('https://fonts.googleapis.com/css2?family=Bungee+Spice&family=Honk:MORF@15&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');     
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+      :root {
+        --color-background-primary:   #ffffff;
+        --color-background-secondary: #f5f4f0;
+        --color-background-tertiary:  #eeede8;
+        --color-text-primary:         #1a1a18;
+        --color-text-secondary:       #73726c;
+        --color-text-success:         #3B6D11;
+        --color-text-danger:          #A32D2D;
+        --color-text-warning:         #854F0B;
+        --color-border-tertiary:      rgba(0,0,0,0.1);
+        --color-border-secondary:     rgba(0,0,0,0.2);
+        --color-border-primary:       rgba(0,0,0,0.35);
+        --font-sans: system-ui, -apple-system, sans-serif;
+        --border-radius-md: 8px;
+        --border-radius-lg: 12px;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --color-background-primary:   #1c1c1a;
+          --color-background-secondary: #252523;
+          --color-background-tertiary:  #2e2e2b;
+          --color-text-primary:         #e8e6de;
+          --color-text-secondary:       #9c9a92;
+          --color-text-success:         #7ab648;
+          --color-text-danger:          #e87070;
+          --color-text-warning:         #d4914a;
+          --color-border-tertiary:      rgba(255,255,255,0.1);
+          --color-border-secondary:     rgba(255,255,255,0.2);
+          --color-border-primary:       rgba(255,255,255,0.35);
+        }
+      }
+
+      body {
+        font-family: 'Poppins';
+        background: var(--color-background-tertiary);
+        color: var(--color-text-primary);
+        font-size: 14px;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      input, select, textarea {
+        font-family: inherit;
+        font-size: 13px;
+        color: var(--color-text-primary);
+        background: var(--color-background-primary);
+        border: 0.5px solid var(--color-border-secondary);
+        border-radius: var(--border-radius-md);
+        padding: 7px 10px;
+        outline: none;
+        transition: border-color 0.15s;
+      }
+      input:focus, select:focus { border-color: var(--color-border-primary); }
+      input::placeholder { color: var(--color-text-secondary); }
+
+      button {
+        font-family: inherit;
+        font-size: 13px;
+        color: var(--color-text-primary);
+        background: transparent;
+        border: 0.5px solid var(--color-border-secondary);
+        border-radius: var(--border-radius-md);
+        padding: 6px 14px;
+        cursor: pointer;
+        transition: background 0.15s, transform 0.1s;
+      }
+      button:hover:not(:disabled) { background: var(--color-background-secondary); }
+      button:active:not(:disabled) { transform: scale(0.98); }
+      button:disabled { opacity: 0.45; cursor: not-allowed; }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

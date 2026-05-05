@@ -1,0 +1,550 @@
+package com.un.explorer.service;
+
+import com.un.explorer.model.*;
+import com.un.explorer.repository.*;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.io.*;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
+import java.util.*;
+import java.util.zip.ZipInputStream;
+
+/**
+ * ┌─────────────────────────────────────────────────────────────────────┐
+ * │           UN VOTE EXPLORER — DATA SEEDING STRATEGY                  │
+ * │                                                                     │
+ * │  We use TWO data sources:                                           │
+ * │                                                                     │
+ * │  1. Harvard Dataverse "unvotes" CSV (1946–2023)                    │
+ * │     → 1 million rows of country-resolution-vote triples            │
+ * │     → FREE, no key, direct download                                │
+ * │     → URL: hdl:1902.1/12379 (Dataverse)                           │
+ * │     → This is the PRIMARY vote data source                         │
+ * │                                                                     │
+ * │  2. UN Digital Library API                                          │
+ * │     → Resolution titles, descriptions, dates                       │
+ * │     → FREE, no key                                                 │
+ * │     → Used to enrich resolution metadata                           │
+ * │                                                                     │
+ * │  3. World Bank API                                                  │
+ * │     → GDP growth, trade data per country per year                  │
+ * │     → FREE, no key                                                 │
+ * │     → Used only by Trade War Dashboard feature (separate project)  │
+ * └─────────────────────────────────────────────────────────────────────┘
+ *
+ * HOW TO RUN:
+ *   POST /api/admin/seed/csv     → seed from Harvard Dataverse CSV
+ *   POST /api/admin/seed/un-api  → enrich with UN API metadata
+ *
+ * Or call seedFromCsv() / enrichFromUnApi() programmatically on startup.
+ */
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class DataSeederService {
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Official UN Dag Hammarskjöld Library CSV — direct download, no API key needed.
+    //
+    // Source : https://digitallibrary.un.org/record/4060887
+    // Covers : All UNGA resolutions from session 1 (Dec 1946) to session 80 (Dec 2025)
+    // Rows   : ~947,000 entries — one row per country per resolution
+    // License: Copyright United Nations; non-commercial use with attribution
+    //
+    // ⚠️  NOTE: The Harvard Dataverse link (doi:10.7910/DVN/LEJUQZ) is for ideal-point
+    //    ESTIMATES only — NOT raw votes. The dataset author Erik Voeten himself
+    //    now recommends this official UN DHL source for raw vote data.
+    // ─────────────────────────────────────────────────────────────────────────
+    private static final String UNVOTES_CSV_URL =
+            "https://digitallibrary.un.org/record/4060887/files/2026_02_06_ga_voting.csv";
+    private final CountryRepository    countryRepo;
+    private final ResolutionRepository resolutionRepo;
+    private final VoteRepository       voteRepo;
+    private final TopicRepository      topicRepo;
+
+    // ISO3 → Country entity map, built once during seeding
+    private final Map<String, Country> countryCache = new HashMap<>();
+
+    // Resolution number → Resolution entity map
+    private final Map<String, Resolution> resolutionCache = new HashMap<>();
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  STEP 1: Seed countries
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Seed the countries table.
+     * Uses a hardcoded list of UN member states with their ISO codes and regions.
+     * (The World Bank API can also supply this — see WorldBankApiService.getCountryMetadata)
+     * Seeds UN countries
+     * Avoids duplicate insertion
+     * Uses cache for fast access
+     */
+    @Transactional
+    public void seedCountries() {
+        if (countryRepo.count() > 0) {
+            log.info("Countries already seeded ({} rows). Loading into cache.", countryRepo.count());
+            countryRepo.findAll().forEach(c -> countryCache.put(c.getIso3Code(), c));
+            return;
+        }
+
+        log.info("Seeding countries...");
+
+        // Full UN member state list: name, iso2, iso3, region, year_joined
+        Object[][] data = {
+                {"Afghanistan",              "AF","AFG", Country.Region.Asia_Pacific,  1946},
+                {"Albania",                  "AL","ALB", Country.Region.Europe,        1955},
+                {"Algeria",                  "DZ","DZA", Country.Region.Africa,        1962},
+                {"Angola",                   "AO","AGO", Country.Region.Africa,        1976},
+                {"Argentina",                "AR","ARG", Country.Region.Americas,      1945},
+                {"Australia",                "AU","AUS", Country.Region.Asia_Pacific,  1945},
+                {"Austria",                  "AT","AUT", Country.Region.Europe,        1955},
+                {"Bangladesh",               "BD","BGD", Country.Region.Asia_Pacific,  1974},
+                {"Belarus",                  "BY","BLR", Country.Region.Europe,        1945},
+                {"Belgium",                  "BE","BEL", Country.Region.Europe,        1945},
+                {"Bolivia",                  "BO","BOL", Country.Region.Americas,      1945},
+                {"Brazil",                   "BR","BRA", Country.Region.Americas,      1945},
+                {"Cambodia",                 "KH","KHM", Country.Region.Asia_Pacific,  1955},
+                {"Canada",                   "CA","CAN", Country.Region.Americas,      1945},
+                {"Chile",                    "CL","CHL", Country.Region.Americas,      1945},
+                {"China",                    "CN","CHN", Country.Region.Asia_Pacific,  1971},
+                {"Colombia",                 "CO","COL", Country.Region.Americas,      1945},
+                {"Cuba",                     "CU","CUB", Country.Region.Americas,      1945},
+                {"Czechia",                  "CZ","CZE", Country.Region.Europe,        1993},
+                {"Denmark",                  "DK","DNK", Country.Region.Europe,        1945},
+                {"Egypt",                    "EG","EGY", Country.Region.Africa,        1945},
+                {"Ethiopia",                 "ET","ETH", Country.Region.Africa,        1945},
+                {"Finland",                  "FI","FIN", Country.Region.Europe,        1955},
+                {"France",                   "FR","FRA", Country.Region.Europe,        1945},
+                {"Germany",                  "DE","DEU", Country.Region.Europe,        1973},
+                {"Ghana",                    "GH","GHA", Country.Region.Africa,        1957},
+                {"Greece",                   "GR","GRC", Country.Region.Europe,        1945},
+                {"Guatemala",                "GT","GTM", Country.Region.Americas,      1945},
+                {"Hungary",                  "HU","HUN", Country.Region.Europe,        1955},
+                {"India",                    "IN","IND", Country.Region.Asia_Pacific,  1945},
+                {"Indonesia",                "ID","IDN", Country.Region.Asia_Pacific,  1950},
+                {"Iran",                     "IR","IRN", Country.Region.Middle_East,   1945},
+                {"Iraq",                     "IQ","IRQ", Country.Region.Middle_East,   1945},
+                {"Ireland",                  "IE","IRL", Country.Region.Europe,        1955},
+                {"Israel",                   "IL","ISR", Country.Region.Middle_East,   1949},
+                {"Italy",                    "IT","ITA", Country.Region.Europe,        1955},
+                {"Japan",                    "JP","JPN", Country.Region.Asia_Pacific,  1956},
+                {"Jordan",                   "JO","JOR", Country.Region.Middle_East,   1955},
+                {"Kenya",                    "KE","KEN", Country.Region.Africa,        1963},
+                {"Kuwait",                   "KW","KWT", Country.Region.Middle_East,   1963},
+                {"Lebanon",                  "LB","LBN", Country.Region.Middle_East,   1945},
+                {"Libya",                    "LY","LBY", Country.Region.Africa,        1955},
+                {"Malaysia",                 "MY","MYS", Country.Region.Asia_Pacific,  1957},
+                {"Mexico",                   "MX","MEX", Country.Region.Americas,      1945},
+                {"Morocco",                  "MA","MAR", Country.Region.Africa,        1956},
+                {"Mozambique",               "MZ","MOZ", Country.Region.Africa,        1975},
+                {"Netherlands",              "NL","NLD", Country.Region.Europe,        1945},
+                {"New Zealand",              "NZ","NZL", Country.Region.Asia_Pacific,  1945},
+                {"Nigeria",                  "NG","NGA", Country.Region.Africa,        1960},
+                {"North Korea",              "KP","PRK", Country.Region.Asia_Pacific,  1991},
+                {"Norway",                   "NO","NOR", Country.Region.Europe,        1945},
+                {"Pakistan",                 "PK","PAK", Country.Region.Asia_Pacific,  1947},
+                {"Palestine",                "PS","PSE", Country.Region.Middle_East,   2012},
+                {"Peru",                     "PE","PER", Country.Region.Americas,      1945},
+                {"Philippines",              "PH","PHL", Country.Region.Asia_Pacific,  1945},
+                {"Poland",                   "PL","POL", Country.Region.Europe,        1945},
+                {"Portugal",                 "PT","PRT", Country.Region.Europe,        1955},
+                {"Qatar",                    "QA","QAT", Country.Region.Middle_East,   1971},
+                {"Romania",                  "RO","ROU", Country.Region.Europe,        1955},
+                {"Russia",                   "RU","RUS", Country.Region.Europe,        1945},
+                {"Rwanda",                   "RW","RWA", Country.Region.Africa,        1962},
+                {"Saudi Arabia",             "SA","SAU", Country.Region.Middle_East,   1945},
+                {"Senegal",                  "SN","SEN", Country.Region.Africa,        1960},
+                {"Singapore",                "SG","SGP", Country.Region.Asia_Pacific,  1965},
+                {"South Africa",             "ZA","ZAF", Country.Region.Africa,        1945},
+                {"South Korea",              "KR","KOR", Country.Region.Asia_Pacific,  1991},
+                {"Spain",                    "ES","ESP", Country.Region.Europe,        1955},
+                {"Sri Lanka",                "LK","LKA", Country.Region.Asia_Pacific,  1955},
+                {"Sudan",                    "SD","SDN", Country.Region.Africa,        1956},
+                {"Sweden",                   "SE","SWE", Country.Region.Europe,        1946},
+                {"Switzerland",              "CH","CHE", Country.Region.Europe,        2002},
+                {"Syria",                    "SY","SYR", Country.Region.Middle_East,   1945},
+                {"Tanzania",                 "TZ","TZA", Country.Region.Africa,        1961},
+                {"Thailand",                 "TH","THA", Country.Region.Asia_Pacific,  1946},
+                {"Tunisia",                  "TN","TUN", Country.Region.Africa,        1956},
+                {"Turkey",                   "TR","TUR", Country.Region.Middle_East,   1945},
+                {"Uganda",                   "UG","UGA", Country.Region.Africa,        1962},
+                {"Ukraine",                  "UA","UKR", Country.Region.Europe,        1945},
+                {"United Arab Emirates",     "AE","ARE", Country.Region.Middle_East,   1971},
+                {"United Kingdom",           "GB","GBR", Country.Region.Europe,        1945},
+                {"United States",            "US","USA", Country.Region.Americas,      1945},
+                {"Uruguay",                  "UY","URY", Country.Region.Americas,      1945},
+                {"Venezuela",                "VE","VEN", Country.Region.Americas,      1945},
+                {"Vietnam",                  "VN","VNM", Country.Region.Asia_Pacific,  1977},
+                {"Yemen",                    "YE","YEM", Country.Region.Middle_East,   1947},
+                {"Zambia",                   "ZM","ZMB", Country.Region.Africa,        1964},
+                {"Zimbabwe",                 "ZW","ZWE", Country.Region.Africa,        1980},
+        };
+
+        for (Object[] row : data) {
+            Country c = countryRepo.save(Country.builder()
+                    .name((String) row[0])
+                    .iso2Code((String) row[1])
+                    .iso3Code((String) row[2])
+                    .region((Country.Region) row[3])
+                    .unMemberSince((Integer) row[4])
+                    .build());
+            countryCache.put(c.getIso3Code(), c);
+        }
+
+        log.info("Seeded {} countries.", countryCache.size());
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  STEP 2: Seed topics
+    // ─────────────────────────────────────────────────────────────────────────
+//    Inserts topic categories
+//    Avoids duplicates
+//    Returns topic map for tagging
+    @Transactional
+    public Map<String, Topic> seedTopics() {
+        Map<String, Topic> topicMap = new LinkedHashMap<>();
+        for (String[] t : new String[][]{
+                {"Human Rights",           "human_rights"},
+                {"Nuclear Weapons",        "nuclear"},
+                {"Climate & Environment",  "climate"},
+                {"Palestine & Middle East","palestine"},
+                {"Trade & Development",    "trade"},
+                {"Peacekeeping",           "peacekeeping"},
+                {"Arms Control",           "arms_control"},
+                {"Decolonization",         "decolonization"},
+        }) {
+            Topic saved = topicRepo.findBySlug(t[1])
+                    .orElseGet(() -> topicRepo.save(Topic.builder().name(t[0]).slug(t[1]).build()));
+            topicMap.put(t[1], saved);
+        }
+        log.info("Seeded {} topics.", topicMap.size());
+        return topicMap;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  STEP 3: Seed votes from Harvard Dataverse CSV
+    //  This is the MAIN data ingestion — loads all 1M+ votes
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Download and parse the Harvard Dataverse "unvotes" CSV.
+     *
+     * CSV format (key columns):
+     *   rcid         → resolution ID (numeric, used as our resolution_number base)
+     *   session      → UN session number (e.g. 75 = 75th session)
+     *   year         → vote year
+     *   country_code → ISO3 country code (e.g. IND, USA, CHN)
+     *   vote         → 1=yes, 2=abstain, 3=no, 8=absent, 9=not_member
+     *   resid        → resolution string ID (e.g. "R/75/71")
+     *   descr        → resolution description
+     *   date         → vote date (YYYY-MM-DD)
+     *   me           → topic flag: 1 if Palestinian conflict topic
+     *   nu           → topic flag: 1 if nuclear weapons topic
+     *   di           → topic flag: 1 if self-determination/decolonization
+     *   hr           → topic flag: 1 if human rights
+     *   co           → topic flag: 1 if colonialism
+     *   ec           → topic flag: 1 if economic development
+     *
+     * @param localCsvPath If null, downloads from Harvard Dataverse.
+     *                     Pass a local path for offline/testing use.
+     */
+    @Transactional
+    public void seedFromCsv(String localCsvPath) throws Exception {
+        log.info("Starting CSV seed. Source: {}", localCsvPath != null ? localCsvPath : "Harvard Dataverse");
+
+        seedCountries();
+        Map<String, Topic> topics = seedTopics();
+
+        // ── Open the CSV ──────────────────────────────────────────────────────
+        Reader reader;
+        if (localCsvPath != null) {
+            reader = new FileReader(localCsvPath, StandardCharsets.UTF_8);
+        } else {
+            log.info("Downloading CSV from Harvard Dataverse...");
+            InputStream stream = new URL(UNVOTES_CSV_URL).openStream();
+            reader = new InputStreamReader(stream, StandardCharsets.UTF_8);
+        }
+
+        // ── Parse CSV (UN DHL format) ─────────────────────────────────────────
+        //
+        // Official UN Dag Hammarskjöld Library column schema (2026_02_06_ga_voting.csv):
+        //   undl_id          → UN Digital Library control number
+        //   ms_code          → ISO3 member state code (e.g. IND, USA, CHN)
+        //   ms_name          → Official state name at time of vote
+        //   ms_vote          → Y / N / A / X  (yes / no / abstain / non-voting)
+        //   date             → YYYY-MM-DD
+        //   session          → Session number (e.g. 78)
+        //   resolution       → Resolution symbol (e.g. A/RES/78/240)
+        //   draft            → Draft resolution symbol (may be empty)
+        //   committee_report → Committee report symbol (may be empty)
+        //   meeting          → Meeting record symbol
+        //   title            → Full English resolution title ← use this for display
+        //   agenda_title     → Agenda item title (may be empty)
+        //   subjects         → Comma-separated subject keywords ← use for topic tagging
+        //   vote_note        → Additional voting note (almost always empty)
+        //   total_yes        → Total yes votes on this resolution
+        //   total_no         → Total no votes
+        //   total_abstentions→ Total abstentions
+        //   total_non_voting → Total non-voting
+        //   total_ms         → Total member states at time of vote
+        //   undl_link        → Link to the record in UN Digital Library
+        //
+        try (BufferedReader br = new BufferedReader(reader)) {
+            String header = br.readLine();
+            if (header == null) throw new IOException("Empty CSV file");
+
+            // Resolve column indices dynamically from the header row
+            List<String> cols = Arrays.asList(header.split(","));
+            int idxMsCode    = cols.indexOf("ms_code");      // ISO3 country code
+            int idxMsVote    = cols.indexOf("ms_vote");      // Y / N / A / X
+            int idxResolution= cols.indexOf("resolution");   // e.g. A/RES/78/240
+            int idxTitle     = cols.indexOf("title");        // full resolution title
+            int idxDate      = cols.indexOf("date");         // YYYY-MM-DD
+            int idxSession   = cols.indexOf("session");      // session number → derive year
+            int idxSubjects  = cols.indexOf("subjects");     // subject keywords for topic tagging
+            int idxTotalYes  = cols.indexOf("total_yes");
+            int idxTotalNo   = cols.indexOf("total_no");
+            int idxTotalAbs  = cols.indexOf("total_abstentions");
+            int idxTotalNv   = cols.indexOf("total_non_voting");
+
+            List<Vote> voteBatch = new ArrayList<>();
+            int totalVotes = 0;
+            int skipped    = 0;
+
+            String line;
+            while ((line = br.readLine()) != null) {
+                String[] parts = parseCSVLine(line);
+                if (parts.length < 4) { skipped++; continue; }
+
+                String iso3Code    = safe(parts, idxMsCode);
+                String voteRaw     = safe(parts, idxMsVote);      // Y / N / A / X
+                String resSymbol   = safe(parts, idxResolution);  // e.g. A/RES/78/240
+                String title       = safe(parts, idxTitle);
+                String dateStr     = safe(parts, idxDate);
+                String subjectsStr = safe(parts, idxSubjects);
+                int    session     = parseIntSafe(safe(parts, idxSession), 0);
+                // UN sessions start in September; session N ≈ year (1945 + N)
+                int    year        = session > 0 ? 1945 + session : 0;
+
+                // Skip if country unknown or non-voting placeholder
+                Country country = countryCache.get(iso3Code);
+                if (country == null || resSymbol.isEmpty()) { skipped++; continue; }
+
+                Vote.VoteType voteType = parseVoteTypeDhl(voteRaw);
+
+                // Get or create resolution (keyed by resolution symbol)
+                Resolution resolution = resolutionCache.computeIfAbsent(resSymbol, k ->
+                        resolutionRepo.findByResolutionNumber(resSymbol).orElseGet(() -> {
+                            LocalDate voteDate = parseDateSafe(dateStr);
+
+                            // Tag topics from the subjects field (keyword matching)
+                            Set<Topic> resTopics = tagTopicsFromSubjects(subjectsStr, topics);
+
+                            // Parse vote totals directly from the CSV (already aggregated)
+                            int tYes = parseIntSafe(safe(parts, idxTotalYes), 0);
+                            int tNo  = parseIntSafe(safe(parts, idxTotalNo),  0);
+                            int tAbs = parseIntSafe(safe(parts, idxTotalAbs), 0);
+                            int tNv  = parseIntSafe(safe(parts, idxTotalNv),  0);
+
+                            String displayTitle = title.isEmpty() ? resSymbol : title;
+                            if (displayTitle.length() > 290) displayTitle = displayTitle.substring(0, 290);
+
+                            return resolutionRepo.save(Resolution.builder()
+                                    .resolutionNumber(resSymbol)
+                                    .title(displayTitle)
+                                    .description(subjectsStr)
+                                    .sessionYear(year)
+                                    .voteDate(voteDate)
+                                    .totalYes(tYes)
+                                    .totalNo(tNo)
+                                    .totalAbstain(tAbs)
+                                    .totalAbsent(tNv)
+                                    .topics(resTopics)
+                                    .build());
+                        })
+                );
+
+                // Update totals
+                updateTotals(resolution, voteType);
+
+                // Build vote
+                voteBatch.add(Vote.builder()
+                        .resolution(resolution)
+                        .country(country)
+                        .voteType(voteType)
+                        .build());
+                totalVotes++;
+
+                // Flush in batches of 500 to keep memory low
+                if (voteBatch.size() >= 500) {
+                    voteRepo.saveAll(voteBatch);
+                    voteBatch.clear();
+                    log.info("Saved {} votes so far...", totalVotes);
+                }
+            }
+
+            // Save remaining
+            if (!voteBatch.isEmpty()) voteRepo.saveAll(voteBatch);
+
+            // Persist updated totals
+            resolutionCache.values().forEach(resolutionRepo::save);
+
+            log.info("CSV seed complete. {} votes saved. {} rows skipped.", totalVotes, skipped);
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  STEP 4: Enrich resolution titles from UN API
+    //  Run AFTER seedFromCsv to add proper English titles
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * For each year, call the UN Digital Library API to get proper resolution
+     * titles and update our database.
+     *
+     * @param fromYear Start year (e.g. 2015)
+     * @param toYear   End year   (e.g. 2023)
+     */
+//    @Transactional
+//    public void enrichFromUnApi(int fromYear, int toYear) {
+//        log.info("Enriching resolution titles from UN API ({}-{})...", fromYear, toYear);
+//
+//        for (int year = fromYear; year <= toYear; year++) {
+//            int page = 1;
+//            while (true) {
+//                List<UnApiService.UnResolution> batch =
+//                        unApiService.fetchResolutionsByYear(year, page, 50);
+//
+//                if (batch.isEmpty()) break;
+//
+//                for (UnApiService.UnResolution unRes : batch) {
+//                    resolutionRepo.findByResolutionNumber(unRes.resolutionNumber())
+//                            .ifPresent(existing -> {
+//                                existing.setTitle(unRes.title());
+//                                existing.setVoteDate(unRes.voteDate());
+//                                resolutionRepo.save(existing);
+//                            });
+//                }
+//
+//                page++;
+//
+//                // Polite delay — don't hammer the UN API
+//                try { Thread.sleep(300); } catch (InterruptedException ignored) {}
+//            }
+//
+//            log.info("Enriched year {} from UN API.", year);
+//        }
+//
+//        log.info("UN API enrichment complete.");
+//    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  Helpers
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Parse vote type from UN DHL CSV format.
+     * UN DHL uses: Y = yes, N = no, A = abstain, X = non-voting (absent)
+     */
+    private Vote.VoteType parseVoteTypeDhl(String raw) {
+        return switch (raw.trim().toUpperCase()) {
+            case "Y"  -> Vote.VoteType.yes;
+            case "N"  -> Vote.VoteType.no;
+            case "A"  -> Vote.VoteType.abstain;
+            default   -> Vote.VoteType.absent;  // "X" or empty = non-voting
+        };
+    }
+
+    /**
+     * Tag a resolution with topics by scanning its subjects field.
+     * The UN DHL subjects column contains comma-separated keywords like:
+     *   "NUCLEAR WEAPONS, DISARMAMENT, NON-PROLIFERATION"
+     *   "HUMAN RIGHTS, WOMEN, REFUGEES"
+     *   "PALESTINE, MIDDLE EAST, OCCUPIED TERRITORIES"
+     */
+    private Set<Topic> tagTopicsFromSubjects(String subjects, Map<String, Topic> topics) {
+        Set<Topic> result = new HashSet<>();
+        if (subjects == null || subjects.isBlank()) return result;
+        String upper = subjects.toUpperCase();
+
+        if (upper.contains("NUCLEAR") || upper.contains("NON-PROLIFERAT") || upper.contains("DISARMAMENT"))
+            addTopic(result, topics, "nuclear");
+        if (upper.contains("HUMAN RIGHTS") || upper.contains("TORTURE") || upper.contains("DETENTION"))
+            addTopic(result, topics, "human_rights");
+        if (upper.contains("PALESTIN") || upper.contains("GAZA") || upper.contains("OCCUPIED TERRIT"))
+            addTopic(result, topics, "palestine");
+        if (upper.contains("CLIMATE") || upper.contains("ENVIRONMENT") || upper.contains("SUSTAINABLE DEV"))
+            addTopic(result, topics, "climate");
+        if (upper.contains("TRADE") || upper.contains("DEVELOPMENT") || upper.contains("ECONOMIC"))
+            addTopic(result, topics, "trade");
+        if (upper.contains("PEACEKEEP") || upper.contains("PEACE OPERATION"))
+            addTopic(result, topics, "peacekeeping");
+        if (upper.contains("ARMS CONTROL") || upper.contains("WEAPONS") || upper.contains("CHEMICAL WEAPON"))
+            addTopic(result, topics, "arms_control");
+        if (upper.contains("COLONIAL") || upper.contains("SELF-DETERMIN") || upper.contains("DECOLONIZ"))
+            addTopic(result, topics, "decolonization");
+
+        return result;
+    }
+
+    /**
+     * Legacy helper kept for backward compatibility.
+     * Use parseVoteTypeDhl() for UN DHL CSV format.
+     */
+    private Vote.VoteType parseVoteType(String raw) {
+        return switch (raw.trim()) {
+            case "1"  -> Vote.VoteType.yes;
+            case "2"  -> Vote.VoteType.abstain;
+            case "3"  -> Vote.VoteType.no;
+            default   -> Vote.VoteType.absent;
+        };
+    }
+
+    private void updateTotals(Resolution r, Vote.VoteType type) {
+        switch (type) {
+            case yes     -> r.setTotalYes(r.getTotalYes() + 1);
+            case no      -> r.setTotalNo(r.getTotalNo() + 1);
+            case abstain -> r.setTotalAbstain(r.getTotalAbstain() + 1);
+            case absent  -> r.setTotalAbsent(r.getTotalAbsent() + 1);
+        }
+    }
+
+    private void addTopic(Set<Topic> set, Map<String, Topic> topics, String slug) {
+        Topic t = topics.get(slug);
+        if (t != null) set.add(t);
+    }
+
+    private LocalDate parseDateSafe(String s) {
+        if (s == null || s.isBlank()) return null;
+        try { return LocalDate.parse(s.substring(0, 10)); } catch (Exception e) { return null; }
+    }
+
+    private int parseIntSafe(String s, int def) {
+        try { return Integer.parseInt(s.trim()); } catch (Exception e) { return def; }
+    }
+
+    private String safe(String[] parts, int idx) {
+        if (idx < 0 || idx >= parts.length) return "";
+        return parts[idx].trim().replace("\"", "");
+    }
+
+    /** Handle quoted CSV fields (commas inside quotes) */
+    private String[] parseCSVLine(String line) {
+        List<String> fields = new ArrayList<>();
+        boolean inQuotes = false;
+        StringBuilder current = new StringBuilder();
+        for (char ch : line.toCharArray()) {
+            if (ch == '"')         inQuotes = !inQuotes;
+            else if (ch == ',' && !inQuotes) { fields.add(current.toString()); current.setLength(0); }
+            else                   current.append(ch);
+        }
+        fields.add(current.toString());
+        return fields.toArray(new String[0]);
+    }
+}

@@ -1,0 +1,18 @@
+# General
+.env
+*.log
+.DS_Store
+
+# Frontend
+frontend/node_modules/
+frontend/build/
+
+# Java
+*.class
+*.jar
+backend/target/
+application.properties
+
+# IDE
+.vscode/
+.idea/
