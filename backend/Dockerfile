@@ -6,4 +6,8 @@ COPY . .
 
 RUN mvn clean package -DskipTests
 
-CMD ["java", "-jar", "target/explorer-0.0.1-SNAPSHOT.jar"]
+
+EXPOSE 10000
+
+CMD ["sh", "-c", "java -Dserver.port=${PORT:-10000} -Dserver.address=0.0.0.0 -jar target/explorer-0.0.1-SNAPSHOT.jar"]
+# CMD ["java", "-jar", "target/explorer-0.0.1-SNAPSHOT.jar"]
