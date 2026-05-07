@@ -24,10 +24,17 @@ export default function CountryProfile() {
   const [error, setError] = useState(null);
   const [totalPages, setTotalPages] = useState(0);
   const ROWS_PER_PAGE = 10;
-
-  useEffect(() => {
-    getCountries().then(setCountries);
-  }, []);
+  
+useEffect(() => {
+  getCountries()
+    .then(data => {
+      console.log("Countries API response:", data);
+      setCountries(data);
+    })
+    .catch(err => {
+      console.error("Countries API ERROR:", err);
+    });
+}, []);
 
   const loadCountry = async (id) => {
     setLoading(true);
