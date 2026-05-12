@@ -97,4 +97,10 @@ WHERE (:topic IS NULL OR t.slug = :topic)
     List<Vote> findAllVotes(@Param("topic") String topic);
 
     boolean existsByResolutionAndCountry(Resolution resolution, Country country);
+
+    @Query("""
+    SELECT CONCAT(v.resolution.id, ':', v.country.id)
+    FROM Vote v
+""")
+    List<String> findAllVoteKeys();
 }

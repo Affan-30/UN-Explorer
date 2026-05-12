@@ -437,6 +437,11 @@ public class DataSeederService {
             int skipped    = 0;
 
             String line;
+//            Optimal Soln for re-seeding
+            Set<String> existingVoteKeys = new HashSet<>();
+            //                First add existing Vote keys
+            existingVoteKeys.addAll(voteRepo.findAllVoteKeys());
+
             while ((line = br.readLine()) != null) {
                 String[] parts = parseCSVLine(line);
                 if (parts.length < 4) { skipped++; continue; }
@@ -498,14 +503,20 @@ public class DataSeederService {
 //                        .country(country)
 //                        .voteType(voteType)
 //                        .build());
-                if (!voteRepo.existsByResolutionAndCountry(resolution, country)) {
+                String voteKey = resolution.getId() + ":" + country.getId();
+
+                if (!existingVoteKeys.contains(voteKey)) {
+
                     voteBatch.add(Vote.builder()
                             .resolution(resolution)
                             .country(country)
                             .voteType(voteType)
                             .build());
+
+                    existingVoteKeys.add(voteKey);
+
+                    totalVotes++;
                 }
-                totalVotes++;
 
                 // Flush in batches of 500 to keep memory low
                 if (voteBatch.size() >= 500) {
