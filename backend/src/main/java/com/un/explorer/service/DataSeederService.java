@@ -87,11 +87,16 @@ public class DataSeederService {
      */
     @Transactional
     public void seedCountries() {
-        if (countryRepo.count() > 0) {
-            log.info("Countries already seeded ({} rows). Loading into cache.", countryRepo.count());
-            countryRepo.findAll().forEach(c -> countryCache.put(c.getIso3Code(), c));
-            return;
-        }
+//        if (countryRepo.count() > 0) {
+//            log.info("Countries already seeded ({} rows). Loading into cache.", countryRepo.count());
+//            countryRepo.findAll().forEach(c -> countryCache.put(c.getIso3Code(), c));
+//            return;
+//        }
+        log.info("Syncing countries...");
+
+// Load existing countries into cache first
+        countryRepo.findAll()
+                .forEach(c -> countryCache.put(c.getIso3Code(), c));
 
         log.info("Seeding countries...");
 
@@ -184,9 +189,123 @@ public class DataSeederService {
                 {"Yemen",                    "YE","YEM", Country.Region.Middle_East,   1947},
                 {"Zambia",                   "ZM","ZMB", Country.Region.Africa,        1964},
                 {"Zimbabwe",                 "ZW","ZWE", Country.Region.Africa,        1980},
+//                New Countries
+                // ── Missing countries to append ─────────────────────────────────────────────
+
+                {"Andorra",                   "AD","AND", Country.Region.Europe,        1993},
+                {"Antigua and Barbuda",       "AG","ATG", Country.Region.Americas,      1981},
+                {"Armenia",                   "AM","ARM", Country.Region.Europe,        1992},
+                {"Azerbaijan",                "AZ","AZE", Country.Region.Europe,        1992},
+                {"Bahamas",                   "BS","BHS", Country.Region.Americas,      1973},
+                {"Bahrain",                   "BH","BHR", Country.Region.Middle_East,   1971},
+                {"Barbados",                  "BB","BRB", Country.Region.Americas,      1966},
+                {"Belize",                    "BZ","BLZ", Country.Region.Americas,      1981},
+                {"Benin",                     "BJ","BEN", Country.Region.Africa,        1960},
+                {"Bhutan",                    "BT","BTN", Country.Region.Asia_Pacific,  1971},
+                {"Bosnia and Herzegovina",    "BA","BIH", Country.Region.Europe,        1992},
+                {"Botswana",                  "BW","BWA", Country.Region.Africa,        1966},
+                {"Brunei Darussalam",         "BN","BRN", Country.Region.Asia_Pacific,  1984},
+                {"Bulgaria",                  "BG","BGR", Country.Region.Europe,        1955},
+                {"Burkina Faso",              "BF","BFA", Country.Region.Africa,        1960},
+                {"Burundi",                   "BI","BDI", Country.Region.Africa,        1962},
+                {"Cameroon",                  "CM","CMR", Country.Region.Africa,        1960},
+                {"Cape Verde",                "CV","CPV", Country.Region.Africa,        1975},
+                {"Central African Republic",  "CF","CAF", Country.Region.Africa,        1960},
+                {"Chad",                      "TD","TCD", Country.Region.Africa,        1960},
+                {"Comoros",                   "KM","COM", Country.Region.Africa,        1975},
+                {"Congo",                     "CG","COG", Country.Region.Africa,        1960},
+                {"Costa Rica",                "CR","CRI", Country.Region.Americas,      1945},
+                {"Côte d'Ivoire",             "CI","CIV", Country.Region.Africa,        1960},
+                {"Croatia",                   "HR","HRV", Country.Region.Europe,        1992},
+                {"Cyprus",                    "CY","CYP", Country.Region.Europe,        1960},
+                {"Democratic Republic of the Congo","CD","COD", Country.Region.Africa, 1960},
+                {"Djibouti",                  "DJ","DJI", Country.Region.Africa,        1977},
+                {"Dominica",                  "DM","DMA", Country.Region.Americas,      1978},
+                {"Dominican Republic",        "DO","DOM", Country.Region.Americas,      1945},
+                {"Ecuador",                   "EC","ECU", Country.Region.Americas,      1945},
+                {"El Salvador",               "SV","SLV", Country.Region.Americas,      1945},
+                {"Equatorial Guinea",         "GQ","GNQ", Country.Region.Africa,        1968},
+                {"Eritrea",                   "ER","ERI", Country.Region.Africa,        1993},
+                {"Estonia",                   "EE","EST", Country.Region.Europe,        1991},
+                {"Fiji",                      "FJ","FJI", Country.Region.Asia_Pacific,  1970},
+                {"Gabon",                     "GA","GAB", Country.Region.Africa,        1960},
+                {"Gambia",                    "GM","GMB", Country.Region.Africa,        1965},
+                {"Georgia",                   "GE","GEO", Country.Region.Europe,        1992},
+                {"Grenada",                   "GD","GRD", Country.Region.Americas,      1974},
+                {"Guinea",                    "GN","GIN", Country.Region.Africa,        1958},
+                {"Guinea-Bissau",             "GW","GNB", Country.Region.Africa,        1974},
+                {"Guyana",                    "GY","GUY", Country.Region.Americas,      1966},
+                {"Haiti",                     "HT","HTI", Country.Region.Americas,      1945},
+                {"Honduras",                  "HN","HND", Country.Region.Americas,      1945},
+                {"Iceland",                   "IS","ISL", Country.Region.Europe,        1946},
+                {"Jamaica",                   "JM","JAM", Country.Region.Americas,      1962},
+                {"Kazakhstan",                "KZ","KAZ", Country.Region.Asia_Pacific,  1992},
+                {"Kiribati",                  "KI","KIR", Country.Region.Asia_Pacific,  1999},
+                {"Kyrgyzstan",                "KG","KGZ", Country.Region.Asia_Pacific,  1992},
+                {"Laos",                      "LA","LAO", Country.Region.Asia_Pacific,  1955},
+                {"Latvia",                    "LV","LVA", Country.Region.Europe,        1991},
+                {"Lesotho",                   "LS","LSO", Country.Region.Africa,        1966},
+                {"Liberia",                   "LR","LBR", Country.Region.Africa,        1945},
+                {"Liechtenstein",             "LI","LIE", Country.Region.Europe,        1990},
+                {"Lithuania",                 "LT","LTU", Country.Region.Europe,        1991},
+                {"Luxembourg",                "LU","LUX", Country.Region.Europe,        1945},
+                {"Madagascar",                "MG","MDG", Country.Region.Africa,        1960},
+                {"Malawi",                    "MW","MWI", Country.Region.Africa,        1964},
+                {"Maldives",                  "MV","MDV", Country.Region.Asia_Pacific,  1965},
+                {"Mali",                      "ML","MLI", Country.Region.Africa,        1960},
+                {"Malta",                     "MT","MLT", Country.Region.Europe,        1964},
+                {"Marshall Islands",          "MH","MHL", Country.Region.Asia_Pacific,  1991},
+                {"Mauritania",                "MR","MRT", Country.Region.Africa,        1961},
+                {"Mauritius",                 "MU","MUS", Country.Region.Africa,        1968},
+                {"Micronesia",                "FM","FSM", Country.Region.Asia_Pacific,  1991},
+                {"Monaco",                    "MC","MCO", Country.Region.Europe,        1993},
+                {"Mongolia",                  "MN","MNG", Country.Region.Asia_Pacific,  1961},
+                {"Myanmar",                   "MM","MMR", Country.Region.Asia_Pacific,  1948},
+                {"Namibia",                   "NA","NAM", Country.Region.Africa,        1990},
+                {"Nauru",                     "NR","NRU", Country.Region.Asia_Pacific,  1999},
+                {"Nepal",                     "NP","NPL", Country.Region.Asia_Pacific,  1955},
+                {"Nicaragua",                 "NI","NIC", Country.Region.Americas,      1945},
+                {"Niger",                     "NE","NER", Country.Region.Africa,        1960},
+                {"Oman",                      "OM","OMN", Country.Region.Middle_East,   1971},
+                {"Palau",                     "PW","PLW", Country.Region.Asia_Pacific,  1994},
+                {"Panama",                    "PA","PAN", Country.Region.Americas,      1945},
+                {"Papua New Guinea",          "PG","PNG", Country.Region.Asia_Pacific,  1975},
+                {"Paraguay",                  "PY","PRY", Country.Region.Americas,      1945},
+                {"Republic of Moldova",       "MD","MDA", Country.Region.Europe,        1992},
+                {"Saint Kitts and Nevis",     "KN","KNA", Country.Region.Americas,      1983},
+                {"Saint Lucia",               "LC","LCA", Country.Region.Americas,      1979},
+                {"Saint Vincent and the Grenadines","VC","VCT", Country.Region.Americas, 1980},
+                {"Samoa",                     "WS","WSM", Country.Region.Asia_Pacific,  1976},
+                {"San Marino",                "SM","SMR", Country.Region.Europe,        1992},
+                {"Sao Tome and Principe",     "ST","STP", Country.Region.Africa,        1975},
+                {"Serbia and Montenegro",     "CS","SCG", Country.Region.Europe,        2003},
+                {"Seychelles",                "SC","SYC", Country.Region.Africa,        1976},
+                {"Sierra Leone",              "SL","SLE", Country.Region.Africa,        1961},
+                {"Slovakia",                  "SK","SVK", Country.Region.Europe,        1993},
+                {"Slovenia",                  "SI","SVN", Country.Region.Europe,        1992},
+                {"Solomon Islands",           "SB","SLB", Country.Region.Asia_Pacific,  1978},
+                {"Somalia",                   "SO","SOM", Country.Region.Africa,        1960},
+                {"Suriname",                  "SR","SUR", Country.Region.Americas,      1975},
+                {"Eswatini",                  "SZ","SWZ", Country.Region.Africa,        1968},
+                {"Tajikistan",                "TJ","TJK", Country.Region.Asia_Pacific,  1992},
+                {"Timor-Leste",               "TL","TLS", Country.Region.Asia_Pacific,  2002},
+                {"Togo",                      "TG","TGO", Country.Region.Africa,        1960},
+                {"Tonga",                     "TO","TON", Country.Region.Asia_Pacific,  1999},
+                {"Trinidad and Tobago",       "TT","TTO", Country.Region.Americas,      1962},
+                {"Turkmenistan",              "TM","TKM", Country.Region.Asia_Pacific,  1992},
+                {"Tuvalu",                    "TV","TUV", Country.Region.Asia_Pacific,  2000},
+                {"Uzbekistan",                "UZ","UZB", Country.Region.Asia_Pacific,  1992},
+                {"Vanuatu",                   "VU","VUT", Country.Region.Asia_Pacific,  1981},
         };
 
         for (Object[] row : data) {
+            String iso3 = (String) row[2];
+
+            // Skip if already exists
+            if (countryCache.containsKey(iso3)) {
+                continue;
+            }
+
             Country c = countryRepo.save(Country.builder()
                     .name((String) row[0])
                     .iso2Code((String) row[1])
@@ -371,14 +490,21 @@ public class DataSeederService {
                 );
 
                 // Update totals
-                updateTotals(resolution, voteType);
+//                updateTotals(resolution, voteType);
 
                 // Build vote
-                voteBatch.add(Vote.builder()
-                        .resolution(resolution)
-                        .country(country)
-                        .voteType(voteType)
-                        .build());
+//                voteBatch.add(Vote.builder()
+//                        .resolution(resolution)
+//                        .country(country)
+//                        .voteType(voteType)
+//                        .build());
+                if (!voteRepo.existsByResolutionAndCountry(resolution, country)) {
+                    voteBatch.add(Vote.builder()
+                            .resolution(resolution)
+                            .country(country)
+                            .voteType(voteType)
+                            .build());
+                }
                 totalVotes++;
 
                 // Flush in batches of 500 to keep memory low
