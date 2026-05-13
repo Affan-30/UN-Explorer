@@ -200,34 +200,91 @@ public class SimilarityService {
      * Group countries into blocs by region and show their vote distribution.
      * Optionally filtered by topic slug.
      */
+//    @Transactional(readOnly = true)
+//    public List<BlocDto> getBlocs(String topicSlug) {
+//        // Fetch all votes (optionally by topic) via JPQL
+//        List<Vote> votes = voteRepo.findAllVotes(topicSlug); // reuse with null countryId means all
+//        log.info("The total votes for calculating voting Blocs : "+votes.size());
+//        // Group by region
+//        Map<String, Set<String>>       regionCountries = new LinkedHashMap<>();
+//        Map<String, Map<String, Long>> regionVoteDist  = new LinkedHashMap<>();
+//
+//        for (Vote v : votes) {
+//            String region = v.getCountry().getRegion() != null
+//                    ? v.getCountry().getRegion().name().replace("_", " ") : "Unknown";
+//
+//            regionCountries.computeIfAbsent(region, k -> new TreeSet<>())
+//                    .add(v.getCountry().getName());
+//
+//            regionVoteDist.computeIfAbsent(region, k -> new HashMap<>())
+//                    .merge(v.getVoteType().name(), 1L, Long::sum);
+//        }
+//
+//        return regionCountries.entrySet().stream()
+//                .map(e -> BlocDto.builder()
+//                        .region(e.getKey())
+//                        .countryCount(e.getValue().size())
+//                        .countries(new ArrayList<>(e.getValue()))
+//                        .voteDistribution(regionVoteDist.getOrDefault(e.getKey(), Map.of()))
+//                        .build())
+//                .collect(Collectors.toList());
+//    }
     @Transactional(readOnly = true)
     public List<BlocDto> getBlocs(String topicSlug) {
-        // Fetch all votes (optionally by topic) via JPQL
-        List<Vote> votes = voteRepo.findAllVotes(topicSlug); // reuse with null countryId means all
-        log.info("The total votes for calculating voting Blocs : "+votes.size());
-        // Group by region
-        Map<String, Set<String>>       regionCountries = new LinkedHashMap<>();
-        Map<String, Map<String, Long>> regionVoteDist  = new LinkedHashMap<>();
 
-        for (Vote v : votes) {
-            String region = v.getCountry().getRegion() != null
-                    ? v.getCountry().getRegion().name().replace("_", " ") : "Unknown";
+        List<Object[]> rows =
+                voteRepo.findBlocData(topicSlug);
 
-            regionCountries.computeIfAbsent(region, k -> new TreeSet<>())
-                    .add(v.getCountry().getName());
+        Map<String, Set<String>> regionCountries =
+                new LinkedHashMap<>();
 
-            regionVoteDist.computeIfAbsent(region, k -> new HashMap<>())
-                    .merge(v.getVoteType().name(), 1L, Long::sum);
+        Map<String, Map<String, Long>> regionVoteDist =
+                new LinkedHashMap<>();
+
+        for (Object[] row : rows) {
+
+            String region =
+                    String.valueOf(row[0]);
+
+            String countryName =
+                    String.valueOf(row[1]);
+
+            String voteType =
+                    String.valueOf(row[2]);
+
+            Long count =
+                    ((Number) row[3]).longValue();
+
+            regionCountries
+                    .computeIfAbsent(region,
+                            k -> new TreeSet<>())
+                    .add(countryName);
+
+            regionVoteDist
+                    .computeIfAbsent(region,
+                            k -> new HashMap<>())
+                    .merge(voteType, count, Long::sum);
         }
 
-        return regionCountries.entrySet().stream()
+        return regionCountries.entrySet()
+                .stream()
                 .map(e -> BlocDto.builder()
                         .region(e.getKey())
                         .countryCount(e.getValue().size())
-                        .countries(new ArrayList<>(e.getValue()))
-                        .voteDistribution(regionVoteDist.getOrDefault(e.getKey(), Map.of()))
+                        .countries(
+                                e.getValue()
+                                        .stream()
+                                        .limit(10)
+                                        .toList()
+                        )
+                        .voteDistribution(
+                                regionVoteDist.getOrDefault(
+                                        e.getKey(),
+                                        Map.of()
+                                )
+                        )
                         .build())
-                .collect(Collectors.toList());
+                .toList();
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

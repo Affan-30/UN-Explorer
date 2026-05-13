@@ -103,4 +103,20 @@ WHERE (:topic IS NULL OR t.slug = :topic)
     FROM Vote v
 """)
     List<String> findAllVoteKeys();
+
+    @Query(value = """
+SELECT
+    COALESCE(c.region, 'Unknown') AS region,
+    c.name AS countryName,
+    v.vote_type AS voteType,
+    COUNT(*) AS total
+FROM votes v
+JOIN countries c ON v.country_id = c.id
+JOIN resolutions r ON v.resolution_id = r.id
+WHERE (:topic IS NULL OR r.topic_slug = :topic)
+GROUP BY c.region, c.name, v.vote_type
+""", nativeQuery = true)
+    List<Object[]> findBlocData(
+            @Param("topic") String topic
+    );
 }
