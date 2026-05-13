@@ -232,8 +232,8 @@ public class SimilarityService {
     @Transactional(readOnly = true)
     public List<BlocDto> getBlocs(String topicSlug) {
 
-        List<Object[]> rows =
-                voteRepo.findBlocData(topicSlug);
+        List<BlocProjection> rows =
+                voteRepo.getBlocStats(topicSlug);
 
         Map<String, Set<String>> regionCountries =
                 new LinkedHashMap<>();
@@ -241,28 +241,32 @@ public class SimilarityService {
         Map<String, Map<String, Long>> regionVoteDist =
                 new LinkedHashMap<>();
 
-        for (Object[] row : rows) {
+        for (BlocProjection row : rows) {
 
             String region =
-                    String.valueOf(row[0]);
+                    row.getRegion();
 
             String countryName =
-                    String.valueOf(row[1]);
+                    row.getCountryName();
 
             String voteType =
-                    String.valueOf(row[2]);
+                    row.getVoteType();
 
             Long count =
-                    ((Number) row[3]).longValue();
+                    row.getTotal();
 
             regionCountries
-                    .computeIfAbsent(region,
-                            k -> new TreeSet<>())
+                    .computeIfAbsent(
+                            region,
+                            k -> new TreeSet<>()
+                    )
                     .add(countryName);
 
             regionVoteDist
-                    .computeIfAbsent(region,
-                            k -> new HashMap<>())
+                    .computeIfAbsent(
+                            region,
+                            k -> new HashMap<>()
+                    )
                     .merge(voteType, count, Long::sum);
         }
 
@@ -270,21 +274,15 @@ public class SimilarityService {
                 .stream()
                 .map(e -> BlocDto.builder()
                         .region(e.getKey())
-                        .countryCount(e.getValue().size())
-                        .countries(
-                                e.getValue()
+                        .countryCount(
+                                e.getValue().size()
+                        ).countries(e.getValue()
                                         .stream()
                                         .limit(10)
-                                        .toList()
-                        )
-                        .voteDistribution(
-                                regionVoteDist.getOrDefault(
+                                        .toList()).
+                        voteDistribution(regionVoteDist.getOrDefault(
                                         e.getKey(),
-                                        Map.of()
-                                )
-                        )
-                        .build())
-                .toList();
+                                        Map.of())).build()).toList();
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

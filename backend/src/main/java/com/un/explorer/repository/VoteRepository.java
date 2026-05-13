@@ -109,14 +109,25 @@ SELECT
     COALESCE(c.region, 'Unknown') AS region,
     c.name AS countryName,
     v.vote_type AS voteType,
-    COUNT(*) AS total
+    COUNT(DISTINCT v.id) AS total
+
 FROM votes v
-JOIN countries c ON v.country_id = c.id
-JOIN resolutions r ON v.resolution_id = r.id
-WHERE (:topic IS NULL OR r.topic_slug = :topic)
+
+JOIN countries c
+    ON v.country_id = c.id
+
+JOIN resolutions r
+    ON v.resolution_id = r.id
+
+LEFT JOIN resolution_topic rt
+    ON r.id = rt.resolution_id
+
+LEFT JOIN topics t
+    ON rt.topic_id = t.id
+
+WHERE (:topic IS NULL OR t.slug = :topic)
+
 GROUP BY c.region, c.name, v.vote_type
 """, nativeQuery = true)
-    List<Object[]> findBlocData(
-            @Param("topic") String topic
-    );
+    List<BlocProjection> getBlocStats(@Param("topic") String topic);
 }
