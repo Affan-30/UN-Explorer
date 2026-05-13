@@ -1,18 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getCountries, getSimilarity, getSimilarityRanking } from '../api';
 
-function ScoreBar({ score }) {
-  const color = score >= 70 ? '#3B6D11' : score >= 50 ? '#BA7517' : '#A32D2D';
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <div style={{ flex: 1, height: 6, background: 'var(--color-background-secondary)', borderRadius: 3 }}>
-        <div style={{ width: `${score}%`, height: 6, background: color, borderRadius: 3, transition: 'width 0.4s' }} />
-      </div>
-      <span style={{ fontSize: 12, fontWeight: 500, color, minWidth: 36 }}>{score}%</span>
-    </div>
-  );
-}
-
 export default function Similarity() {
   const [countries, setCountries] = useState([]);
   const [c1, setC1] = useState('');
@@ -21,6 +9,14 @@ export default function Similarity() {
   const [ranking, setRanking] = useState([]);
   const [loading, setLoading] = useState(false);
   const [rankLoading, setRankLoading] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   useEffect(() => {
     getCountries().then(setCountries).catch(console.error);
@@ -52,6 +48,63 @@ export default function Similarity() {
     }
   };
 
+  function ScoreBar({ score }) {
+    const color =
+      score >= 70
+        ? "#3B6D11"
+        : score >= 50
+          ? "#BA7517"
+          : "#A32D2D";
+
+    return (
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: isMobile ? 6 : 8,
+          width: "100%",
+        }}
+      >
+        {/* Progress Bar */}
+        <div
+          style={{
+            flex: 1,
+            height: isMobile ? 7 : 6,
+            background:
+              "var(--color-background-secondary)",
+            borderRadius: 999,
+            overflow: "hidden",
+            minWidth: 0,
+          }}
+        >
+          <div
+            style={{
+              width: `${score}%`,
+              height: "100%",
+              background: color,
+              borderRadius: 999,
+              transition: "width 0.4s ease",
+            }}
+          />
+        </div>
+
+        {/* Percentage */}
+        <span
+          style={{
+            fontSize: isMobile ? 11 : 12,
+            fontWeight: 600,
+            color,
+            minWidth: isMobile ? 32 : 36,
+            textAlign: "right",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {score}%
+        </span>
+      </div>
+    );
+  }
+
   const card = (children) => ({
     background: 'var(--color-background-primary)',
     border: '0.5px solid var(--color-border-tertiary)',
@@ -62,99 +115,327 @@ export default function Similarity() {
 
   return (
     <div>
-      {/* Country pair selector */}
+      {/* Country Pair Selector */}
       <div style={card()}>
-        <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 10, color: 'var(--color-text-primary)' }}>
+        <div
+          style={{
+            fontSize: isMobile ? 12 : 13,
+            fontWeight: 500,
+            marginBottom: 10,
+            color: "var(--color-text-primary)",
+          }}
+        >
           Compare two countries
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 12 }}>
-          <select style={{ flex: 1 }} value={c1} onChange={e => setC1(e.target.value)}>
+
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            alignItems: isMobile ? "stretch" : "center",
+            flexDirection: isMobile ? "column" : "row",
+            marginBottom: 12,
+          }}
+        >
+          <select
+            style={{
+              flex: 1,
+              width: isMobile ? "100%" : "auto",
+            }}
+            value={c1}
+            onChange={(e) => setC1(e.target.value)}
+          >
             <option value="">Select country A...</option>
-            {countries.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+
+            {countries.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
           </select>
-          <span style={{ fontSize: 13, color: 'var(--color-text-secondary)', fontWeight: 500 }}>vs</span>
-          <select style={{ flex: 1 }} value={c2} onChange={e => setC2(e.target.value)}>
+
+          <span
+            style={{
+              fontSize: 13,
+              color: "var(--color-text-secondary)",
+              fontWeight: 500,
+              textAlign: "center",
+            }}
+          >
+            vs
+          </span>
+
+          <select
+            style={{
+              flex: 1,
+              width: isMobile ? "100%" : "auto",
+            }}
+            value={c2}
+            onChange={(e) => setC2(e.target.value)}
+          >
             <option value="">Select country B...</option>
-            {countries.filter(c => c.id !== parseInt(c1)).map(c =>
-              <option key={c.id} value={c.id}>{c.name}</option>
-            )}
+
+            {countries
+              .filter((c) => c.id !== parseInt(c1))
+              .map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
           </select>
-          <button onClick={handleCompare} disabled={!c1 || !c2 || c1 === c2 || loading}>
-            {loading ? 'Computing...' : 'Compare'}
+
+          <button
+            onClick={handleCompare}
+            disabled={!c1 || !c2 || c1 === c2 || loading}
+            style={{
+              width: isMobile ? "100%" : "auto",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {loading ? "Computing..." : "Compare"}
           </button>
         </div>
 
         {result && (
           <div>
-            <div style={{
-              display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 12,
-            }}>
+            <div
+              style={{
+                display: "grid",
+
+                gridTemplateColumns: isMobile
+                  ? "1fr"
+                  : "1fr 1fr 1fr",
+
+                gap: 8,
+                marginBottom: 12,
+              }}
+            >
               {[
                 {
-                  label: 'Similarity score',
-                  value: result.score != null ? `${result.score}%` : 'No similarity',
+                  label: "Similarity score",
+
+                  value:
+                    result.score != null
+                      ? `${result.score}%`
+                      : "No similarity",
+
                   color:
                     result.score == null
-                      ? 'var(--color-text-secondary)'
+                      ? "var(--color-text-secondary)"
                       : result.score >= 70
-                        ? 'var(--color-text-success)'
+                        ? "var(--color-text-success)"
                         : result.score >= 50
-                          ? 'var(--color-text-warning)'
-                          : 'var(--color-text-danger)',
+                          ? "var(--color-text-warning)"
+                          : "var(--color-text-danger)",
                 },
-                { label: 'Matching votes', value: result.matchingVotes },
-                { label: 'Compared on', value: `${result.totalCompared} resolutions` },
-              ].map(s => (
-                <div key={s.label} style={{ background: 'var(--color-background-secondary)', borderRadius: 'var(--border-radius-md)', padding: '10px 12px' }}>
-                  <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginBottom: 3 }}>{s.label}</div>
-                  <div style={{ fontSize: 18, fontWeight: 500, color: s.color || 'var(--color-text-primary)' }}>{s.value}</div>
+
+                {
+                  label: "Matching votes",
+                  value: result.matchingVotes,
+                },
+
+                {
+                  label: "Compared on",
+                  value: `${result.totalCompared} resolutions`,
+                },
+              ].map((s) => (
+                <div
+                  key={s.label}
+                  style={{
+                    background:
+                      "var(--color-background-secondary)",
+
+                    borderRadius: "var(--border-radius-md)",
+
+                    padding: isMobile
+                      ? "10px"
+                      : "10px 12px",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color:
+                        "var(--color-text-secondary)",
+                      marginBottom: 3,
+                    }}
+                  >
+                    {s.label}
+                  </div>
+
+                  <div
+                    style={{
+                      fontSize: isMobile ? 16 : 18,
+                      fontWeight: 500,
+                      color:
+                        s.color ||
+                        "var(--color-text-primary)",
+                    }}
+                  >
+                    {s.value}
+                  </div>
                 </div>
               ))}
             </div>
-            <div style={{
-              padding: '8px 12px', borderRadius: 'var(--border-radius-md)',
-              background: 'var(--color-background-secondary)',
-              fontSize: 13, color: 'var(--color-text-secondary)',
-            }}>
+
+            <div
+              style={{
+                padding: isMobile
+                  ? "10px"
+                  : "8px 12px",
+
+                borderRadius:
+                  "var(--border-radius-md)",
+
+                background:
+                  "var(--color-background-secondary)",
+
+                fontSize: isMobile ? 12 : 13,
+                color: "var(--color-text-secondary)",
+                lineHeight: 1.5,
+              }}
+            >
               {result.interpretation}
             </div>
           </div>
         )}
       </div>
 
-      {/* Ranking: one country vs all */}
+      {/* Ranking */}
       <div style={card()}>
-        <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 10, color: 'var(--color-text-primary)' }}>
+        <div
+          style={{
+            fontSize: isMobile ? 12 : 13,
+            fontWeight: 500,
+            marginBottom: 10,
+            color: "var(--color-text-primary)",
+          }}
+        >
           Closest allies ranking
         </div>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            marginBottom: 12,
+          }}
+        >
           <select
-            style={{ flex: 1 }}
-            onChange={e => handleRanking(e.target.value)}
+            style={{
+              flex: 1,
+              width: "100%",
+            }}
+            onChange={(e) =>
+              handleRanking(e.target.value)
+            }
             defaultValue=""
           >
-            <option value="">Pick a country to see its allies...</option>
-            {countries.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            <option value="">
+              Pick a country to see its allies...
+            </option>
+
+            {countries.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
           </select>
         </div>
 
         {rankLoading && (
-          <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>Computing similarity across all countries...</div>
+          <div
+            style={{
+              fontSize: 13,
+              color: "var(--color-text-secondary)",
+            }}
+          >
+            Computing similarity across all
+            countries...
+          </div>
         )}
 
         {ranking.length > 0 && !rankLoading && (
           <div>
             {ranking.map((c, i) => (
-              <div key={c.id} style={{
-                display: 'flex', alignItems: 'center', gap: 10,
-                padding: '7px 0',
-                borderBottom: i < ranking.length - 1 ? '0.5px solid var(--color-border-tertiary)' : 'none',
-              }}>
-                <span style={{ fontSize: 11, color: 'var(--color-text-secondary)', minWidth: 18 }}>{i + 1}</span>
-                <span style={{ fontSize: 13, color: 'var(--color-text-primary)', minWidth: 120 }}>{c.name}</span>
-                <span style={{ fontSize: 11, color: 'var(--color-text-secondary)', minWidth: 80 }}>{c.region}</span>
-                <div style={{ flex: 1 }}>
-                  <ScoreBar score={Math.round(c.score)} />
+              <div
+                key={c.id}
+                style={{
+                  display: "flex",
+
+                  flexDirection: isMobile
+                    ? "column"
+                    : "row",
+
+                  alignItems: isMobile
+                    ? "flex-start"
+                    : "center",
+
+                  gap: 10,
+
+                  padding: "10px 0",
+
+                  borderBottom:
+                    i < ranking.length - 1
+                      ? "0.5px solid var(--color-border-tertiary)"
+                      : "none",
+                }}
+              >
+                {/* Top row mobile */}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    width: "100%",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: 11,
+                      color:
+                        "var(--color-text-secondary)",
+                      minWidth: 18,
+                    }}
+                  >
+                    {i + 1}
+                  </span>
+
+                  <span
+                    style={{
+                      fontSize: isMobile ? 12 : 13,
+                      color:
+                        "var(--color-text-primary)",
+                      fontWeight: 500,
+                      minWidth: isMobile
+                        ? "auto"
+                        : 120,
+                    }}
+                  >
+                    {c.name}
+                  </span>
+
+                  <span
+                    style={{
+                      fontSize: 11,
+                      color:
+                        "var(--color-text-secondary)",
+                    }}
+                  >
+                    {c.region}
+                  </span>
+                </div>
+
+                {/* Score bar */}
+                <div
+                  style={{  
+                     width: isMobile ? "100%" : 920,
+    flexShrink: 0,
+                  }}
+                >
+                  <ScoreBar
+                    score={Math.round(c.score)}
+                  />
                 </div>
               </div>
             ))}
@@ -164,3 +445,19 @@ export default function Similarity() {
     </div>
   );
 }
+//  <div>
+//             {ranking.map((c, i) => (
+//               <div key={c.id} style={{
+//                 display: 'flex', alignItems: 'center', gap: 10,
+//                 padding: '7px 0',
+//                 borderBottom: i < ranking.length - 1 ? '0.5px solid var(--color-border-tertiary)' : 'none',
+//               }}>
+//                 <span style={{ fontSize: 11, color: 'var(--color-text-secondary)', minWidth: 18 }}>{i + 1}</span>
+//                 <span style={{ fontSize: 13, color: 'var(--color-text-primary)', minWidth: 120 }}>{c.name}</span>
+//                 <span style={{ fontSize: 11, color: 'var(--color-text-secondary)', minWidth: 80 }}>{c.region}</span>
+//                 <div style={{ flex: 1 }}>
+//                   <ScoreBar score={Math.round(c.score)} />
+//                 </div>
+//               </div>
+//             ))}
+//           </div>

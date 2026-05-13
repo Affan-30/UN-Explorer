@@ -28,6 +28,14 @@ export default function Resolutions() {
   const [selected, setSelected] = useState(null);
   const [votes, setVotes] = useState(null);
   const [votesLoading, setVotesLoading] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const fetchResolutions = useCallback(async () => {
     setLoading(true);
@@ -62,135 +70,361 @@ export default function Resolutions() {
 
   return (
     <div>
-      {/* Search & filter bar */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+      {/* Search & Filter Bar */}
+      <div
+        style={{
+          display: "flex",
+          gap: 8,
+          marginBottom: 16,
+          flexWrap: "wrap",
+          flexDirection: isMobile ? "column" : "row",
+        }}
+      >
         <input
-          style={{ flex: 1, minWidth: 200 }}
+          style={{
+            flex: 1,
+            minWidth: isMobile ? "100%" : 200,
+            width: isMobile ? "100%" : "auto",
+          }}
           placeholder="Search resolutions, e.g. 'nuclear', 'Gaza'..."
           value={search}
-          onChange={e => setSearch(e.target.value)}
+          onChange={(e) => setSearch(e.target.value)}
         />
-        <select value={topic} onChange={e => setTopic(e.target.value)}>
-          {TOPICS.map(t => <option key={t.slug} value={t.slug}>{t.label}</option>)}
+
+        <select
+          value={topic}
+          onChange={(e) => setTopic(e.target.value)}
+          style={{
+            width: isMobile ? "100%" : "auto",
+          }}
+        >
+          {TOPICS.map((t) => (
+            <option key={t.slug} value={t.slug}>
+              {t.label}
+            </option>
+          ))}
         </select>
-        <select value={year} onChange={e => setYear(e.target.value)}>
+
+        <select
+          value={year}
+          onChange={(e) => setYear(e.target.value)}
+          style={{
+            width: isMobile ? "100%" : "auto",
+          }}
+        >
           <option value="">All years</option>
-          {[2024, 2023, 2022, 2021, 2020, 2019, 2018].map(y =>
-            <option key={y} value={y}>{y}</option>
-          )}
+
+          {[2024, 2023, 2022, 2021, 2020, 2019, 2018].map((y) => (
+            <option key={y} value={y}>
+              {y}
+            </option>
+          ))}
         </select>
       </div>
 
-      
-      {/* Vote breakdown modal */}
+      {/* Vote Breakdown Modal */}
       {selected && (
-        <div style={{
-          marginTop: 16,
-          marginBottom: 16,
-          background: 'var(--color-background-primary)',
-          border: '0.5px solid var(--color-border-tertiary)',
-          borderRadius: 'var(--border-radius-lg)',
-          padding: '14px 16px',
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+        <div
+          style={{
+            marginTop: 16,
+            marginBottom: 16,
+            background: "var(--color-background-primary)",
+            border: "0.5px solid var(--color-border-tertiary)",
+            borderRadius: "var(--border-radius-lg)",
+            padding: isMobile ? "12px" : "14px 16px",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: isMobile ? "flex-start" : "center",
+              flexDirection: isMobile ? "column" : "row",
+              gap: 10,
+              marginBottom: 12,
+            }}
+          >
             <div>
-              <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginBottom: 3 }}>{selected.resolution_number}</div>
-              <div style={{ fontSize: 15, fontWeight: 500, color: 'var(--color-text-primary)' }}>{selected.title}</div>
+              <div
+                style={{
+                  fontSize: 11,
+                  color: "var(--color-text-secondary)",
+                  marginBottom: 3,
+                }}
+              >
+                {selected.resolution_number}
+              </div>
+
+              <div
+                style={{
+                  fontSize: isMobile ? 13 : 15,
+                  fontWeight: 500,
+                  color: "var(--color-text-primary)",
+                  lineHeight: 1.4,
+                }}
+              >
+                {selected.title}
+              </div>
             </div>
-            <button onClick={() => { setSelected(null); setVotes(null); }} style={{ fontSize: 12 }}>Close</button>
+
+            <button
+              onClick={() => {
+                setSelected(null);
+                setVotes(null);
+              }}
+              style={{
+                fontSize: 12,
+                width: isMobile ? "100%" : "auto",
+              }}
+            >
+              Close
+            </button>
           </div>
 
           {votesLoading ? (
-            <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>Loading votes...</div>
-          ) : votes && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10 }}>
-              {Object.entries(VOTE_COLORS).map(([type, style]) => (
-                <div key={type} style={{
-                  background: style.bg,
-                  borderRadius: 'var(--border-radius-md)',
-                  padding: '10px 12px',
-                }}>
-                  <div style={{ fontSize: 12, fontWeight: 500, color: style.text, marginBottom: 6 }}>
-                    {style.label} ({votes[type]?.length || 0})
-                  </div>
-                  {(votes[type] || []).slice(0, 8).map(c => (
-                    <div key={c.id} style={{ fontSize: 11, color: style.text, marginBottom: 2 }}>{c.name}</div>
-                  ))}
-                  {(votes[type]?.length || 0) > 8 && (
-                    <div style={{ fontSize: 11, color: style.text, opacity: 0.6 }}>
-                      +{votes[type].length - 8} more
-                    </div>
-                  )}
-                </div>
-              ))}
+            <div
+              style={{
+                fontSize: 13,
+                color: "var(--color-text-secondary)",
+              }}
+            >
+              Loading votes...
             </div>
+          ) : (
+            votes && (
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: isMobile
+                    ? "1fr"
+                    : "repeat(auto-fit, minmax(140px, 1fr))",
+
+                  gap: 10,
+                }}
+              >
+                {Object.entries(VOTE_COLORS).map(([type, style]) => (
+                  <div
+                    key={type}
+                    style={{
+                      background: style.bg,
+                      borderRadius: "var(--border-radius-md)",
+                      padding: "10px 12px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 500,
+                        color: style.text,
+                        marginBottom: 6,
+                      }}
+                    >
+                      {style.label} ({votes[type]?.length || 0})
+                    </div>
+
+                    {(votes[type] || []).slice(0, 8).map((c) => (
+                      <div
+                        key={c.id}
+                        style={{
+                          fontSize: 11,
+                          color: style.text,
+                          marginBottom: 2,
+                        }}
+                      >
+                        {c.name}
+                      </div>
+                    ))}
+
+                    {(votes[type]?.length || 0) > 8 && (
+                      <div
+                        style={{
+                          fontSize: 11,
+                          color: style.text,
+                          opacity: 0.6,
+                        }}
+                      >
+                        +{votes[type].length - 8} more
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )
           )}
         </div>
       )}
 
-      {/* Resolution list */}
-      <div style={{
-        background: 'var(--color-background-primary)',
-        border: '0.5px solid var(--color-border-tertiary)',
-        borderRadius: 'var(--border-radius-lg)',
-        overflow: 'hidden',
-      }}>
+      {/* Resolution List */}
+      <div
+        style={{
+          background: "var(--color-background-primary)",
+          border: "0.5px solid var(--color-border-tertiary)",
+          borderRadius: "var(--border-radius-lg)",
+          overflowX: "auto", // IMPORTANT FOR MOBILE
+        }}
+      >
         {loading ? (
-          <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: 13 }}>
+          <div
+            style={{
+              padding: 24,
+              textAlign: "center",
+              color: "var(--color-text-secondary)",
+              fontSize: 13,
+            }}
+          >
             Loading resolutions...
           </div>
         ) : resolutions.length === 0 ? (
-          <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: 13 }}>
+          <div
+            style={{
+              padding: 24,
+              textAlign: "center",
+              color: "var(--color-text-secondary)",
+              fontSize: 13,
+            }}
+          >
             No resolutions found.
           </div>
         ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <table
+            style={{
+              width: "100%",
+              minWidth: isMobile ? 700 : "100%",
+              borderCollapse: "collapse",
+              fontSize: isMobile ? 11 : 13,
+            }}
+          >
             <thead>
-              <tr style={{ borderBottom: '0.5px solid var(--color-border-tertiary)' }}>
-                {['Resolution', 'Title', 'Topics', 'Yes', 'No', 'Abstain'].map(h => (
-                  <th key={h} style={{ padding: '8px 12px', textAlign: 'left', color: 'var(--color-text-secondary)', fontWeight: 500 }}>{h}</th>
+              <tr
+                style={{
+                  borderBottom:
+                    "0.5px solid var(--color-border-tertiary)",
+                }}
+              >
+                {[
+                  "Resolution",
+                  "Title",
+                  "Topics",
+                  "Yes",
+                  "No",
+                  "Abstain",
+                ].map((h) => (
+                  <th
+                    key={h}
+                    style={{
+                      padding: isMobile ? "8px 8px" : "8px 12px",
+                      textAlign: "left",
+                      color: "var(--color-text-secondary)",
+                      fontWeight: 500,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {h}
+                  </th>
                 ))}
               </tr>
             </thead>
+
             <tbody>
-              {resolutions.map(r => (
+              {resolutions.map((r) => (
                 <tr
                   key={r.id}
                   onClick={() => openVotes(r)}
-                  style={{ borderBottom: '0.5px solid var(--color-border-tertiary)', cursor: 'pointer' }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'var(--color-background-secondary)'}
-                  onMouseLeave={e => e.currentTarget.style.background = ''}
+                  style={{
+                    borderBottom:
+                      "0.5px solid var(--color-border-tertiary)",
+                    cursor: "pointer",
+                  }}
+                  onMouseEnter={(e) =>
+                  (e.currentTarget.style.background =
+                    "var(--color-background-secondary)")
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.background = "")
+                  }
                 >
-                  <td style={{ padding: '8px 12px', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>
+                  <td
+                    style={{
+                      padding: isMobile ? "8px 8px" : "8px 12px",
+                      color: "var(--color-text-secondary)",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
                     {r.resolutionNumber}
                   </td>
-                  <td style={{ padding: '8px 12px', fontWeight: 500, color: 'var(--color-text-primary)' }}>
+
+                  <td
+                    style={{
+                      padding: isMobile ? "8px 8px" : "8px 12px",
+                      fontWeight: 500,
+                      color: "var(--color-text-primary)",
+                      minWidth: isMobile ? 240 : "auto",
+                      lineHeight: 1.4,
+                    }}
+                  >
                     {r.title}
                   </td>
-                  <td style={{ padding: '8px 12px' }}>
-                    <span  style={{
-                        display: 'inline-block',
-                        fontSize: 10,
-                        padding: '2px 7px',
+
+                  <td
+                    style={{
+                      padding: isMobile ? "8px 8px" : "8px 12px",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    <span
+                      style={{
+                        display: "inline-block",
+                        fontSize: isMobile ? 9 : 10,
+                        padding: "2px 7px",
                         borderRadius: 20,
-                        background: '#EEEDFE',
-                        color: '#3C3489',
+                        background: "#EEEDFE",
+                        color: "#3C3489",
                         marginRight: 3,
                         fontWeight: 500,
-                      }}>
-                        {r.topics[0]}
-                      </span>
+                      }}
+                    >
+                      {r.topics[0]}
+                    </span>
                   </td>
-                  <td style={{ padding: '8px 12px', color: '#a6f961', fontWeight: 500 }}>{r.totalYes}</td>
-                  <td style={{ padding: '8px 12px', color: '#ff5e5e', fontWeight: 500 }}>{r.totalNo}</td>
-                  <td style={{ padding: '8px 12px', color: '#fc971c', fontWeight: 500 }}>{r.totalAbstain}</td>
+
+                  <td
+                    style={{
+                      padding: isMobile ? "8px 8px" : "8px 12px",
+                      color: "#a6f961",
+                      fontWeight: 500,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {r.totalYes}
+                  </td>
+
+                  <td
+                    style={{
+                      padding: isMobile ? "8px 8px" : "8px 12px",
+                      color: "#ff5e5e",
+                      fontWeight: 500,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {r.totalNo}
+                  </td>
+
+                  <td
+                    style={{
+                      padding: isMobile ? "8px 8px" : "8px 12px",
+                      color: "#fc971c",
+                      fontWeight: 500,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {r.totalAbstain}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         )}
       </div>
-
     </div>
   );
 }

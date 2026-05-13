@@ -461,7 +461,7 @@ function FeatureCard({ feature, index, onNavigate }) {
 /* ── Stats strip ─────────────────────────────────────────────────────── */
 const STATS = [
   { label: "Resolutions", value: 5694, suffix: "+" },
-  { label: "Member States", value: 85, suffix: "" },
+  { label: "Member States", value: 191, suffix: "" },
   { label: "Votes Recorded", value: 450000, suffix: "+" },
   { label: "Years Covered", value: 75, suffix: "+" },
 ];
@@ -475,9 +475,20 @@ export default function LandingPage({ onNavigate }) {
   const [headerScrolled, setHeaderScrolled] = useState(false);
   const [backendReady, setBackendReady] = useState(false);
   const [loading, setLoading] = useState(true);
-const navigate = useNavigate();
+  const navigate = useNavigate();
+const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
 useEffect(() => {
+  const handleResize = () => {
+    setIsMobile(window.innerWidth <= 768);
+  };
+
+  window.addEventListener("resize", handleResize);
+
+  return () => window.removeEventListener("resize", handleResize);
+}, []);
+
+  useEffect(() => {
     const wakeServer = async () => {
       try {
         // Replace with your backend health endpoint
@@ -513,275 +524,331 @@ useEffect(() => {
     <div style={{ background: C.offWhite, fontFamily: F.body, overflowX: "hidden" }}>
 
       {/* ── Navbar ── */}
-      <header style={{
-        position: "sticky", top: 0, zIndex: 200,
-        background: headerScrolled ? "rgba(10,37,64,0.97)" : C.navy,
-        borderBottom: `2px solid ${C.gold}`,
-        boxShadow: headerScrolled ? "0 4px 24px rgba(0,0,0,0.35)" : "0 2px 12px rgba(0,100,160,0.25)",
-        backdropFilter: "blur(12px)",
-        transition: "all 260ms ease",
-        padding: "0 32px",
-        height: 60,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <img src="/un.png" alt="" width={50}/>
-          <div>
-            <div style={{ fontFamily: F.heading, fontSize: 20, fontWeight: 700, color: C.white, letterSpacing: "0.01em", lineHeight: 1.1 }}>
-              UN Vote Explorer
-            </div>
-            <div style={{ fontFamily: F.body, fontSize: 10, color: C.gold, letterSpacing: "0.12em", textTransform: "uppercase" }}>
-              General Assembly · Voting Records
-            </div>
-          </div>
-        </div>
-        <nav style={{ display: "flex", alignItems: "center", gap: 4 }}>
-          {FEATURES.map(f => (
-            <button key={f.id} onClick={() => goToDashboard(f.id)} style={{
-              fontFamily: F.body, fontSize: 12, fontWeight: 500,
-              color: "rgba(255,255,255,0.72)", background: "transparent",
-              border: "none", borderRadius: 6, padding: "6px 12px",
-              cursor: "pointer", letterSpacing: "0.01em", transition: "all 160ms ease",
-            }}
-              onMouseEnter={e => { e.target.style.color = C.white; e.target.style.background = "rgba(255,255,255,0.1)"; }}
-              onMouseLeave={e => { e.target.style.color = "rgba(255,255,255,0.72)"; e.target.style.background = "transparent"; }}
-            >
-              {f.label}
-            </button>
-          ))}
-          <button onClick={() => navigate("/dashboard")} 
-          disabled={!backendReady}
-          style={{
-            fontFamily: F.body, fontSize: 12, fontWeight: 600,
-            color: C.navy, background: C.white,
-            border: "none", borderRadius: 8, padding: "7px 16px",
-            marginLeft: 8, cursor: "pointer", letterSpacing: "0.02em",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-            transition: "all 160ms ease",
-            cursor: backendReady ? "pointer" : "not-allowed",
-        opacity: backendReady ? 1 : 0.5,
-          }}
-            onMouseEnter={e => e.currentTarget.style.background = C.unBlueLt}
-            onMouseLeave={e => e.currentTarget.style.background = C.white}
-          >
-           
-            {loading
-        ? "Waking server..."
-        : backendReady
-        ? " Dashboard →"
-        : "Server Unavailable"}
-          </button>
-        </nav>
-      </header>
+      {/* const isMobile = window.innerWidth <= 768; */}
 
-      {/* ── Hero ── */}
-      {/*  abc*/}
-<section
+<header
   style={{
-    background: `linear-gradient(160deg, ${C.navy} 0%, ${C.navyMid} 55%, #0a4a7c 100%)`,
-    // background: '#0a4a7c',
-    padding: "50px 32px 80px",
-    position: "relative",
-    overflow: "hidden",
+    position: "sticky",
+    top: 0,
+    zIndex: 200,
+    background: headerScrolled ? "rgba(10,37,64,0.97)" : C.navy,
+    borderBottom: `2px solid ${C.gold}`,
+    boxShadow: headerScrolled
+      ? "0 4px 24px rgba(0,0,0,0.35)"
+      : "0 2px 12px rgba(0,100,160,0.25)",
+    backdropFilter: "blur(12px)",
+    transition: "all 260ms ease",
+    padding: isMobile ? "10px 16px" : "0 32px",
+    minHeight: isMobile ? "auto" : 60,
+
+    display: "flex",
+    flexDirection: isMobile ? "row" : "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: isMobile ? 12 : 0,
   }}
 >
-  {/* Background grid */}
+  {/* Left Section */}
   <div
     style={{
-      position: "absolute",
-      inset: 0,
-      opacity: 0.1,
-      backgroundImage: `linear-gradient(${C.unBlue} 1px, transparent 1px), linear-gradient(90deg, ${C.unBlue} 1px, transparent 1px)`,
-      backgroundSize: "48px 48px",
-    }}
-  />
-
-  {/* Glow */}
-  <div
-    style={{
-      position: "absolute",
-      top: -120,
-      right: -120,
-      width: 480,
-      height: 480,
-      borderRadius: "50%",
-      background: `radial-gradient(circle, ${C.unBlue}22 0%, transparent 70%)`,
-      pointerEvents: "none",
-    }}
-  />
-
-  {/* MAIN FLEX CONTAINER */}
-  <div
-    style={{
-      maxWidth: 1100,
-      margin: "0 auto",
       display: "flex",
       alignItems: "center",
-      justifyContent: "space-between",
-      gap: 40,
-      flexWrap: "wrap",
-      position: "relative",
+      gap: 12,
+      width: isMobile ? "100%" : "auto",
+      justifyContent: isMobile ? "center" : "flex-start",
     }}
   >
-    {/* ───────── LEFT SIDE ───────── */}
-    <div style={{ flex: 1, minWidth: "300px", textAlign: "left" }}>
-      <h1
-        style={{
-          fontFamily: "Playfair Display",
-          fontSize: "clamp(3rem, 1rem + 5vw, 5rem)",
-          lineHeight: 0.95,
-          letterSpacing: "-0.04em",
-          margin: 0,
-          color: "#ffffff",
-          transform: heroVisible ? "translateY(0)" : "translateY(30px)",
-            opacity: heroVisible ? 1 : 0,
-            transition: "all 600ms ease 180ms",
-        }}
-      >
-        Decode Every <br />
-        <span
-          style={{
-            color: "#2d8fd5",
-            fontStyle: "italic",
-          }}
-        >
-          resolution
-        </span>
-        <br />
-        Understand Every Alliance.
-      </h1>
+    <img
+      src="/un.png"
+      alt=""
+      width={isMobile ? 38 : 50}
+      style={{ flexShrink: 0 }}
+    />
 
-      <p
-        style={{
-          fontFamily: F.body,
-          fontSize: 16,
-          color: "rgba(255,255,255,0.72)",
-          lineHeight: 1.7,
-          maxWidth: 520,
-          marginTop: 20,
-          transform: heroVisible ? "translateY(0)" : "translateY(20px)",
-            opacity: heroVisible ? 1 : 0,
-            transition: "all 600ms ease 280ms",
-        }}
-      >
-        The most comprehensive tool for analysing UN General Assembly voting
-        patterns — resolutions, country alliances, regional blocs, and deep
-        country profiles all in one place.
-      </p>
-    </div>
-
-    {/* ───────── RIGHT SIDE ───────── */}
-    <div
-      style={{
-        flex: 1,
-        minWidth: "260px",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: 20,
-      }}
-    >
-      {/* UN emblem */}
+    <div>
       <div
         style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          width: 170,
-          height: 170,
-          borderRadius: "50%",
-          background: `rgba(0,158,219,0.15)`,
-          border: `2px solid ${C.gold}`,
-          transform: heroVisible
-            ? "scale(1) rotate(0deg)"
-            : "scale(0.5) rotate(-20deg)",
-          opacity: heroVisible ? 1 : 0,
-          transition: "all 700ms cubic-bezier(0.34,1.56,0.64,1)",
+          fontFamily: F.heading,
+          fontSize: "clamp(14px, 4vw, 20px)",
+          fontWeight: 700,
+          color: C.white,
+          letterSpacing: "0.01em",
+          lineHeight: 1.1,
+          textAlign: isMobile ? "center" : "left",
         }}
       >
-        <img src="/un.png" alt="UN logo" style={{ width: 140 }} />
+        UN Vote Explorer
       </div>
 
-      {/* Golden tag */}
       <div
         style={{
-          background: `${C.gold}22`,
-          border: `1px solid ${C.gold}55`,
-          borderRadius: 20,
-          padding: "5px 16px",
-          fontSize: 15,
-          fontWeight: 600,
+          fontFamily: F.body,
+          fontSize: "clamp(7px, 2vw, 10px)",
           color: C.gold,
-          letterSpacing: "0.10em",
+          letterSpacing: "0.12em",
           textTransform: "uppercase",
-          fontFamily: F.body,
-          transform: heroVisible ? "translateY(0)" : "translateY(20px)",
-          opacity: heroVisible ? 1 : 0,
-          transition: "all 550ms ease 100ms",
-          textAlign: "center",
+          textAlign: isMobile ? "center" : "left",
+          marginTop: 4,
         }}
       >
-        United Nations General Assembly ·  1946 – 2025
-      </div>
-
-      {/* Buttons */}
-      <div
-        style={{
-          display: "flex",
-          gap: 12,
-          flexWrap: "wrap",
-          justifyContent: "center",
-          transform: heroVisible ? "translateY(0)" : "translateY(20px)",
-            opacity: heroVisible ? 1 : 0,
-            transition: "all 600ms ease 280ms",
-        }}
-      >
-        <button
-          onClick={() => navigate("/dashboard")}
-          style={{
-            fontFamily: F.body,
-            fontSize: 15,
-            fontWeight: 700,
-            background: C.unBlue,
-            color: C.white,
-            border: "none",
-            borderRadius: 10,
-            padding: "13px 26px",
-            cursor: "pointer",
-            boxShadow: `0 6px 24px ${C.unBlue}55`,
-            cursor: backendReady ? "pointer" : "not-allowed",
-        opacity: backendReady ? 1 : 0.5,
-          }}
-        >
-          Open Dashboard →
-        </button>
-
-        <button
-          onClick={() =>
-            document
-              .getElementById("features-section")
-              .scrollIntoView({ behavior: "smooth" })
-          }
-          style={{
-            fontFamily: F.body,
-            fontSize: 14,
-            fontWeight: 500,
-            background: "rgba(255,255,255,0.08)",
-            color: "rgba(255,255,255,0.85)",
-            border: "1px solid rgba(255,255,255,0.22)",
-            borderRadius: 10,
-            padding: "13px 22px",
-            cursor: "pointer",
-          }}
-        >
-          Explore Features
-        </button>
+        General Assembly · Voting Records
       </div>
     </div>
   </div>
-</section>
+
+  {/* Right Section */}
+  <nav
+    style={{
+      display: "flex",
+      flexDirection: isMobile ? "row" : "",
+      alignItems: "center",
+      justifyContent: "center",
+      flexWrap: "wrap",
+      gap: 8,
+      width: isMobile ? "100%" : "auto",
+    }}
+  >
+    <button
+      onClick={() => navigate("/dashboard")}
+      disabled={!backendReady}
+      style={{
+        fontFamily: F.body,
+        fontSize: isMobile ? 11 : 12,
+        fontWeight: 600,
+        color: C.navy,
+        background: C.white,
+        border: "none",
+        borderRadius: 8,
+        padding: isMobile ? "6px 12px" : "7px 16px",
+        marginLeft: isMobile ? 0 : 8,
+        cursor: backendReady ? "pointer" : "not-allowed",
+        opacity: backendReady ? 1 : 0.5,
+        boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+        transition: "all 160ms ease",
+        whiteSpace: "nowrap",
+      }}
+      onMouseEnter={(e) =>
+        (e.currentTarget.style.background = C.unBlueLt)
+      }
+      onMouseLeave={(e) =>
+        (e.currentTarget.style.background = C.white)
+      }
+    >
+      {loading
+        ? "Waking server..."
+        : backendReady
+        ? "Dashboard →"
+        : "Server Unavailable"}
+    </button>
+  </nav>
+</header>
+
+      {/* ── Hero ── */}
+      {/*  abc*/}
+      <section
+        style={{
+          background: `linear-gradient(160deg, ${C.navy} 0%, ${C.navyMid} 55%, #0a4a7c 100%)`,
+          // background: '#0a4a7c',
+          padding: "50px 32px 80px",
+          position: "relative",
+          overflow: "hidden",
+        }}
+      >
+        {/* Background grid */}
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            opacity: 0.1,
+            backgroundImage: `linear-gradient(${C.unBlue} 1px, transparent 1px), linear-gradient(90deg, ${C.unBlue} 1px, transparent 1px)`,
+            backgroundSize: "48px 48px",
+          }}
+        />
+
+        {/* Glow */}
+        <div
+          style={{
+            position: "absolute",
+            top: -120,
+            right: -120,
+            width: 480,
+            height: 480,
+            borderRadius: "50%",
+            background: `radial-gradient(circle, ${C.unBlue}22 0%, transparent 70%)`,
+            pointerEvents: "none",
+          }}
+        />
+
+        {/* MAIN FLEX CONTAINER */}
+        <div
+          style={{
+            maxWidth: 1100,
+            margin: "0 auto",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 40,
+            flexWrap: "wrap",
+            position: "relative",
+          }}
+        >
+          {/* ───────── LEFT SIDE ───────── */}
+          <div style={{ flex: 1, minWidth: "300px", textAlign: "left" }}>
+            <h1
+              style={{
+                fontFamily: "Playfair Display",
+                fontSize: "clamp(3rem, 1rem + 5vw, 5rem)",
+                lineHeight: 0.95,
+                letterSpacing: "-0.04em",
+                margin: 0,
+                color: "#ffffff",
+                transform: heroVisible ? "translateY(0)" : "translateY(30px)",
+                opacity: heroVisible ? 1 : 0,
+                transition: "all 600ms ease 180ms",
+              }}
+            >
+              Decode Every <br />
+              <span
+                style={{
+                  color: "#2d8fd5",
+                  fontStyle: "italic",
+                }}
+              >
+                resolution
+              </span>
+              <br />
+              Understand Every Alliance.
+            </h1>
+
+            <p
+              style={{
+                fontFamily: F.body,
+                fontSize: 16,
+                color: "rgba(255,255,255,0.72)",
+                lineHeight: 1.7,
+                maxWidth: 520,
+                marginTop: 20,
+                transform: heroVisible ? "translateY(0)" : "translateY(20px)",
+                opacity: heroVisible ? 1 : 0,
+                transition: "all 600ms ease 280ms",
+              }}
+            >
+              The most comprehensive tool for analysing UN General Assembly voting
+              patterns — resolutions, country alliances, regional blocs, and deep
+              country profiles all in one place.
+            </p>
+          </div>
+
+          {/* ───────── RIGHT SIDE ───────── */}
+          <div
+            style={{
+              flex: 1,
+              minWidth: "260px",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 20,
+            }}
+          >
+            {/* UN emblem */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 170,
+                height: 170,
+                borderRadius: "50%",
+                background: `rgba(0,158,219,0.15)`,
+                border: `2px solid ${C.gold}`,
+                transform: heroVisible
+                  ? "scale(1) rotate(0deg)"
+                  : "scale(0.5) rotate(-20deg)",
+                opacity: heroVisible ? 1 : 0,
+                transition: "all 700ms cubic-bezier(0.34,1.56,0.64,1)",
+              }}
+            >
+              <img src="/un.png" alt="UN logo" style={{ width: 140 }} />
+            </div>
+
+            {/* Golden tag */}
+            <div
+              style={{
+                background: `${C.gold}22`,
+                border: `1px solid ${C.gold}55`,
+                borderRadius: 20,
+                padding: "5px 16px",
+                fontSize: 15,
+                fontWeight: 600,
+                color: C.gold,
+                letterSpacing: "0.10em",
+                textTransform: "uppercase",
+                fontFamily: F.body,
+                transform: heroVisible ? "translateY(0)" : "translateY(20px)",
+                opacity: heroVisible ? 1 : 0,
+                transition: "all 550ms ease 100ms",
+                textAlign: "center",
+              }}
+            >
+              United Nations General Assembly ·  1946 – 2025
+            </div>
+
+            {/* Buttons */}
+            <div
+              style={{
+                display: "flex",
+                gap: 12,
+                flexWrap: "wrap",
+                justifyContent: "center",
+                transform: heroVisible ? "translateY(0)" : "translateY(20px)",
+                opacity: heroVisible ? 1 : 0,
+                transition: "all 600ms ease 280ms",
+              }}
+            >
+              <button
+                onClick={() => navigate("/dashboard")}
+                style={{
+                  fontFamily: F.body,
+                  fontSize: 15,
+                  fontWeight: 700,
+                  background: C.unBlue,
+                  color: C.white,
+                  border: "none",
+                  borderRadius: 10,
+                  padding: "13px 26px",
+                  cursor: "pointer",
+                  boxShadow: `0 6px 24px ${C.unBlue}55`,
+                  cursor: backendReady ? "pointer" : "not-allowed",
+                  opacity: backendReady ? 1 : 0.5,
+                }}
+              >
+                Open Dashboard →
+              </button>
+
+              <button
+                onClick={() =>
+                  document
+                    .getElementById("features-section")
+                    .scrollIntoView({ behavior: "smooth" })
+                }
+                style={{
+                  fontFamily: F.body,
+                  fontSize: 14,
+                  fontWeight: 500,
+                  background: "rgba(255,255,255,0.08)",
+                  color: "rgba(255,255,255,0.85)",
+                  border: "1px solid rgba(255,255,255,0.22)",
+                  borderRadius: 10,
+                  padding: "13px 22px",
+                  cursor: "pointer",
+                }}
+              >
+                Explore Features
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
       {/* abc */}
 
       {/* ── Stats strip ── */}
@@ -792,7 +859,7 @@ useEffect(() => {
       }}>
         <div style={{
           maxWidth: 900, margin: "0 auto",
-          display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 0,
+          display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: 0,
         }}>
           {STATS.map((s, i) => (
             <div key={i} style={{
@@ -813,7 +880,7 @@ useEffect(() => {
 
       {/* ── Vote legend strip ── */}
       <section style={{ background: C.unBlueLt, borderBottom: `1px solid #b8dff5`, padding: "14px 32px" }}>
-        <div style={{ maxWidth: 900, margin: "0 auto", display: "flex", gap: 24, alignItems: "center", flexWrap: "wrap", justifyContent: "center" }}>
+        <div style={{ maxWidth: 900, margin: "0 auto", display: "flex", gap: 24, alignItems: "center", flexWrap: "nowrap", justifyContent: "center" }}>
           <span style={{ fontFamily: F.body, fontSize: 11, color: C.textMuted, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>Vote types:</span>
           {[
             { label: "Yes", color: C.yes },
@@ -830,12 +897,12 @@ useEffect(() => {
       </section>
 
       {/* ── Features ── */}
-      <section id="features-section" style={{ padding: "72px 32px", maxWidth: 1180, margin: "0 auto" }}>
+      <section id="features-section" style={{ padding:isMobile ?"20px 22px" : "72px 32px", maxWidth: 1180, margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: 52 }}>
           <div style={{ fontFamily: F.body, fontSize: 11, fontWeight: 700, color: C.unBlue, textTransform: "uppercase", letterSpacing: "0.14em", marginBottom: 10 }}>
             Four Powerful Tools
           </div>
-          <h2 style={{ fontFamily: F.heading, fontSize: "clamp(26px, 3.5vw, 40px)", fontWeight: 700, color: C.textDark, marginBottom: 14, lineHeight: 1.2 }}>
+          <h2 style={{ fontFamily: F.heading, fontSize:isMobile ? 25 : "clamp(26px, 3.5vw, 40px)", fontWeight: 700, color: C.textDark, marginBottom: 14, lineHeight: 1.2 }}>
             Everything you need to understand<br />UN diplomacy
           </h2>
           <p style={{ fontFamily: F.body, fontSize: 15, color: C.textMid, maxWidth: 540, margin: "0 auto", lineHeight: 1.7 }}>
@@ -846,11 +913,11 @@ useEffect(() => {
         <div style={{
           display: "grid",
           // gridColumn: "span 4",
-          gridTemplateColumns: "repeat(4, minmax(260px, 1fr))",
+          gridTemplateColumns:isMobile ? "repeat(1, minmax(300px, 1fr))" : "repeat(4, minmax(260px, 1fr))",
           gap: 24,
         }}>
           {FEATURES.map((f, i) => (
-            <FeatureCard key={f.id} feature={f} index={i}/>
+            <FeatureCard key={f.id} feature={f} index={i} />
           ))}
         </div>
       </section>
@@ -863,11 +930,11 @@ useEffect(() => {
           <p style={{ fontFamily: F.body, fontSize: 14, color: "rgba(255,255,255,0.65)", maxWidth: 520, margin: "0 auto 52px", lineHeight: 1.7 }}>
             Data sourced directly from the UN Digital Library. Every vote cast in the General Assembly from 2006 to 2025, structured and ready to explore.
           </p>
-          <div style={{ 
-            display: "grid", 
-            gridTemplateColumns: "repeat(3, 1fr)", 
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(3, 1fr)",
             gap: 20,
-            }}>
+          }}>
             {[
               { step: "01", title: "Search & Filter", desc: "Find any resolution by keyword, year, topic, or resolution number in milliseconds." },
               { step: "02", title: "Analyse Alignment", desc: "Run similarity scores between countries or entire regional blocs on any issue area." },
@@ -876,19 +943,19 @@ useEffect(() => {
               <div key={i} style={{
                 background: "rgba(255,255,255,0.05)",
                 border: "1px solid rgba(255,255,255,0.10)",
-                borderRadius: 12, padding: "24px 20px", textAlign: "left",
+                borderRadius: 12, padding:isMobile? "10px" : "24px 20px", textAlign: "left",
                 transition: "transform 300ms ease",
               }} onMouseEnter={(e) => {
-  e.currentTarget.style.transform = "translateY(-10px)";
-  e.currentTarget.style.boxShadow = "1px 2px 10px rgb(225, 225, 225)";
-}}
-onMouseLeave={(e) => {
-  e.currentTarget.style.transform = "translateY(0)";
-  e.currentTarget.style.boxShadow = "";
-}}>
+                e.currentTarget.style.transform = "translateY(-10px)";
+                e.currentTarget.style.boxShadow = "1px 2px 10px rgb(225, 225, 225)";
+              }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "translateY(0)";
+                  e.currentTarget.style.boxShadow = "";
+                }}>
                 <div style={{ fontFamily: F.mono, fontSize: 26, fontWeight: 700, color: C.unBlue, marginBottom: 10, opacity: 0.8 }}>{s.step}</div>
-                <div style={{ fontFamily: F.heading, fontSize: 20, fontWeight: 700, color: C.white, marginBottom: 8 }}>{s.title}</div>
-                <div style={{ fontFamily: F.body, fontSize: 13, color: "rgba(255,255,255,0.55)", lineHeight: 1.6 }}>{s.desc}</div>
+                <div style={{ fontFamily: F.heading, fontSize:isMobile? 15 : 20, fontWeight: 700, color: C.white, marginBottom: 8 }}>{s.title}</div>
+                <div style={{ fontFamily: F.body, fontSize:isMobile? 10 : 13, color: "rgba(255,255,255,0.55)", lineHeight: 1.6 }}>{s.desc}</div>
               </div>
             ))}
           </div>
@@ -899,21 +966,21 @@ onMouseLeave={(e) => {
       <section style={{ padding: "80px 32px", textAlign: "center", background: C.unBlueLt, borderTop: `2px solid #b8dff5` }}>
         <div style={{ maxWidth: 620, margin: "0 auto" }}>
           <div style={{ display: "flex", justifyContent: "center", marginBottom: 20 }}>
-            <img src="/un.png" alt="" width={120}/>
+            <img src="/un.png" alt="" width={120} />
             {/* <UnGlobe size={56} color={C.unBlue} /> */}
           </div>
           <h2 style={{ fontFamily: F.heading, fontSize: 34, fontWeight: 700, color: C.textDark, marginBottom: 14, lineHeight: 1.2 }}>
             Ready to explore UN diplomacy?
           </h2>
           <p style={{ fontFamily: F.body, fontSize: 15, color: C.textMid, marginBottom: 32, lineHeight: 1.7 }}>
-            75+ years of voting data. 85 countries. One dashboard.
+            75+ years of voting data. 191 countries. One dashboard.
           </p>
           <button
             onClick={() => {
-  if (backendReady) {
-    navigate("/dashboard");
-  }
-}}
+              if (backendReady) {
+                navigate("/dashboard");
+              }
+            }}
             style={{
               fontFamily: F.body, fontSize: 16, fontWeight: 700,
               background: C.navy, color: C.white,
@@ -922,7 +989,7 @@ onMouseLeave={(e) => {
               boxShadow: `0 8px 28px ${C.navy}44`,
               transition: "all 220ms ease",
               cursor: backendReady ? "pointer" : "not-allowed",
-        opacity: backendReady ? 1 : 0.5,
+              opacity: backendReady ? 1 : 0.5,
             }}
             onMouseEnter={e => { e.currentTarget.style.background = C.navyMid; e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.boxShadow = `0 14px 36px ${C.navy}55`; }}
             onMouseLeave={e => { e.currentTarget.style.background = C.navy; e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = `0 8px 28px ${C.navy}44`; }}
@@ -935,15 +1002,18 @@ onMouseLeave={(e) => {
       {/* ── Footer ── */}
       <footer style={{ background: C.navy, borderTop: `2px solid ${C.gold}`, padding: "40px 32px 28px" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", gap: 32, marginBottom: 32 }}>
+          <div style={{ display: "grid", gridTemplateColumns:isMobile? "repeat(3, 1fr)": "2fr 1fr 1fr 1fr", gap: 32, marginBottom: 32 }}>
             {/* Brand */}
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                <img src="/un.png" alt="" width={55}/>
+            <div style={{
+              ...(isMobile &&
+              {display: "flex",flexDirection: "row", gap: "15px", gridColumn: "1 / -1"}),
+            }}>
+              <div style={{ display: "flex", alignItems: "center",flexDirection: "row", gap: 10, marginBottom: 12 }}>
+                <img src="/un.png" alt="" width={55} />
                 {/* <UnGlobe size={28} color={C.white} /> */}
-                <div style={{ fontFamily: F.heading, fontSize: 15, fontWeight: 700, color: C.white }}>UN Vote Explorer</div>
+                <div style={{ fontFamily: F.heading, fontSize: isMobile? 13 : 19, fontWeight: 700, color: C.white }}>UN Vote Explorer</div>
               </div>
-              <p style={{ fontFamily: F.body, fontSize: 12, color: "rgba(255,255,255,0.50)", lineHeight: 1.7, maxWidth: 240 }}>
+              <p style={{ fontFamily: F.body, fontSize:isMobile? 10 : 12, color: "rgba(255,255,255,0.50)", lineHeight: 1.7, maxWidth: 240 }}>
                 An independent analytical tool built on data from the United Nations Digital Library. Not affiliated with the United Nations.
               </p>
             </div>
@@ -977,17 +1047,7 @@ onMouseLeave={(e) => {
 
           <div style={{ borderTop: "1px solid rgba(255,255,255,0.10)", paddingTop: 20, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
             <div style={{ fontFamily: F.body, fontSize: 11, color: "rgba(255,255,255,0.35)" }}>
-              © 2025 UN Vote Explorer. Data sourced from the UN Digital Library. All rights reserved.
-            </div>
-            <div style={{ display: "flex", gap: 16 }}>
-              {["About", "Methodology", "Data Sources"].map(l => (
-                <span key={l} style={{ fontFamily: F.body, fontSize: 11, color: "rgba(255,255,255,0.40)", cursor: "pointer", transition: "color 150ms" }}
-                  onMouseEnter={e => e.target.style.color = C.white}
-                  onMouseLeave={e => e.target.style.color = "rgba(255,255,255,0.40)"}
-                >
-                  {l}
-                </span>
-              ))}
+              © 2025 UN Vote Explorer ·  {isMobile && <br />}  All rights reserved ·  {isMobile && <br />} Data can be incorrect due to computational error.
             </div>
           </div>
         </div>
