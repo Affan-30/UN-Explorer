@@ -119,7 +119,7 @@ JOIN countries c
 JOIN resolutions r
     ON v.resolution_id = r.id
 
-LEFT JOIN resolution_topic rt
+LEFT JOIN resolution_topics rt
     ON r.id = rt.resolution_id
 
 LEFT JOIN topics t
