@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import Resolutions   from './Resolutions';
 import Similarity    from './Similarity';
 import VotingBlocs   from './VotingBlocs';
-import CountryProfile from './CountryProfile';
+import Countryprofile from './Countryprofile';
 
 const PAGES = [
   { id: 'resolutions', label: 'Resolutions'    },
@@ -175,7 +175,7 @@ export default function dashboard() {
     {page === "resolutions" && <Resolutions />}
     {page === "similarity" && <Similarity />}
     {page === "blocs" && <VotingBlocs />}
-    {page === "country" && <CountryProfile />}
+    {page === "country" && <Countryprofile />}
   </div>
 </div>
   );
