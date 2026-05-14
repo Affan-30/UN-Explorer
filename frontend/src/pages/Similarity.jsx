@@ -445,19 +445,3 @@ export default function Similarity() {
     </div>
   );
 }
-//  <div>
-//             {ranking.map((c, i) => (
-//               <div key={c.id} style={{
-//                 display: 'flex', alignItems: 'center', gap: 10,
-//                 padding: '7px 0',
-//                 borderBottom: i < ranking.length - 1 ? '0.5px solid var(--color-border-tertiary)' : 'none',
-//               }}>
-//                 <span style={{ fontSize: 11, color: 'var(--color-text-secondary)', minWidth: 18 }}>{i + 1}</span>
-//                 <span style={{ fontSize: 13, color: 'var(--color-text-primary)', minWidth: 120 }}>{c.name}</span>
-//                 <span style={{ fontSize: 11, color: 'var(--color-text-secondary)', minWidth: 80 }}>{c.region}</span>
-//                 <div style={{ flex: 1 }}>
-//                   <ScoreBar score={Math.round(c.score)} />
-//                 </div>
-//               </div>
-//             ))}
-//           </div>
